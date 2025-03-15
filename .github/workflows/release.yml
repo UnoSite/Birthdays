@@ -6,7 +6,7 @@ on:
     types: [published]
 
 env:
-  COMPONENT_DIR: repo
+  COMPONENT_DIR: Birthdays
 
 jobs:
   release_zip_file:
@@ -19,23 +19,23 @@ jobs:
           token: ${{ secrets.PAT_TOKEN }}
       - name: Update manifest.json version to ${{ github.event.release.tag_name }}
         run: |
-          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ github.event.release.tag_name }} --path /custom_components/repo/
+          python3 ${{ github.workspace }}/.github/scripts/update_hacs_manifest.py --version ${{ github.event.release.tag_name }} --path /custom_components/birthdays/
       - name: Commit manifest update
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add ./custom_components/repo/manifest.json
+          git add ./custom_components/birthdays/manifest.json
           git commit -m "Updated manifest.json"
           git push origin HEAD:main
       - name: Create zip
         run: |
-          cd custom_components/repo
-          zip repo.zip -r ./
+          cd custom_components/birthdays
+          zip birthdays.zip -r ./
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@2.9.0
         with:
           repo_token: ${{ secrets.PAT_TOKEN }}
-          file: ./custom_components/repo/repo.zip
-          asset_name: repo.zip
+          file: ./custom_components/birthdays/birthdays.zip
+          asset_name: birthdays.zip
           tag: ${{ github.ref }}
           overwrite: true
