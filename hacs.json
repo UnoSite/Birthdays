@@ -1,9 +1,9 @@
 {
-    "name": "repo",
+    "name": "Birthdays",
     "render_readme": true,
     "homeassistant": "2025.1.0",
     "hacs": "2.0.0",
     "zip_release": true,
-    "filename": "repo.zip",
+    "filename": "birthdays.zip",
     "hide_default_branch": true
 }
