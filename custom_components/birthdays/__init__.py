@@ -16,10 +16,9 @@ Configuration is handled via the UI (Config Flow).
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-
+from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from .const import *
 
-# Set up logging
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -40,9 +39,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
     # Forward setup to sensor, binary sensor, and calendar platforms
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
 
     _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
     return True
@@ -51,7 +48,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of a config entry.
 
     This function is called when an instance of the integration is removed.
-    It cleans up stored data and unloads the associated platforms.
+    It cleans up stored data, removes devices, and unloads the associated platforms.
 
     Args:
         hass (HomeAssistant): The Home Assistant instance.
@@ -62,15 +59,42 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
-    # Remove entry data
-    hass.data[DOMAIN].pop(entry.entry_id, None)
+    # Remove device from device registry
+    device_registry = async_get_device_registry(hass)
+    device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
+    if device:
+        device_registry.async_remove_device(device.id)
+        _LOGGER.info("Removed device for entry: %s", entry.entry_id)
 
-    # Unload the associated platforms
+    # Unload associated platforms
     success = await hass.config_entries.async_forward_entry_unload(entry, ["sensor", "binary_sensor", "calendar"])
 
-    if success:
-        _LOGGER.info("Successfully unloaded Birthdays integration for entry: %s", entry.entry_id)
-    else:
-        _LOGGER.warning("Failed to unload some platforms for entry: %s", entry.entry_id)
+    # Remove entry data
+    if entry.entry_id in hass.data[DOMAIN]:
+        hass.data[DOMAIN].pop(entry.entry_id)
 
+    _LOGGER.info("Successfully unloaded Birthdays integration for entry: %s", entry.entry_id)
     return success
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Handle cleanup when an entry is removed.
+
+    This function ensures the integration is completely cleaned up without requiring a restart.
+
+    Args:
+        hass (HomeAssistant): The Home Assistant instance.
+        entry (ConfigEntry): The configuration entry being removed.
+    """
+    _LOGGER.debug("Removing Birthdays integration entry: %s", entry.entry_id)
+
+    # Remove calendar entity if it was the last instance
+    if CALENDAR_ENTITY_ID in hass.data.get(DOMAIN, {}):
+        hass.data[DOMAIN].pop(CALENDAR_ENTITY_ID)
+        _LOGGER.info("Removed Birthdays calendar entity")
+
+    # Remove domain data if no entries remain
+    if not hass.data[DOMAIN]:
+        hass.data.pop(DOMAIN)
+        _LOGGER.info("All Birthdays data removed from Home Assistant")
+
+    _LOGGER.info("Cleanup complete for Birthdays integration entry: %s", entry.entry_id)
