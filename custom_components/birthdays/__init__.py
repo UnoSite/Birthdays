@@ -59,8 +59,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
-    # Remove device from device registry
-    device_registry = await async_get_device_registry(hass)
+    # Remove device from device registry (uden await!)
+    device_registry = async_get_device_registry(hass)  # ✅ Ingen await!
     if device_registry:
         device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
         if device:
