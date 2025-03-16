@@ -5,13 +5,14 @@ The calendar is always 'on' and will include events for each birthday.
 """
 
 import logging
+from datetime import datetime
 from homeassistant.helpers.entity import Entity
-from .const import *
+from homeassistant.core import HomeAssistant
+from .const import DOMAIN, CALENDAR_NAME, CALENDAR_ENTITY_ID, CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY
 
-# Set up logging
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, entry, async_add_entities):
+async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform.
 
     This function is called when a new instance of the integration is added.
@@ -22,8 +23,22 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities: Function to register new entities.
     """
     _LOGGER.debug("Setting up calendar entity for Birthdays integration.")
-    
-    async_add_entities([BirthdaysCalendar()])
+
+    # Hent eksisterende kalender eller opret en ny
+    if CALENDAR_ENTITY_ID not in hass.data.setdefault(DOMAIN, {}):
+        hass.data[DOMAIN][CALENDAR_ENTITY_ID] = BirthdaysCalendar()
+
+    # Tilføj kalenderen til Home Assistant
+    async_add_entities([hass.data[DOMAIN][CALENDAR_ENTITY_ID]])
+
+    # Tilføj fødselsdagen fra denne instans til kalenderen
+    calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
+    calendar.add_event(
+        name=entry.data[CONF_NAME],
+        year=entry.data[CONF_YEAR],
+        month=entry.data[CONF_MONTH],
+        day=entry.data[CONF_DAY],
+    )
 
     _LOGGER.info("Birthdays calendar entity added: %s", CALENDAR_ENTITY_ID)
 
@@ -34,6 +49,7 @@ class BirthdaysCalendar(Entity):
         """Initialize the calendar entity."""
         self._name = CALENDAR_NAME
         self._entity_id = CALENDAR_ENTITY_ID
+        self._events = []
 
         _LOGGER.debug("Initialized BirthdaysCalendar with entity_id: %s", self._entity_id)
 
@@ -54,3 +70,24 @@ class BirthdaysCalendar(Entity):
     def unique_id(self):
         """Return a unique ID for the calendar entity."""
         return self._entity_id
+
+    def add_event(self, name, year, month, day):
+        """Add a birthday event to the calendar.
+
+        Args:
+            name (str): Name of the person.
+            year (int): Year of birth.
+            month (int): Month of birth.
+            day (int): Day of birth.
+        """
+        event_date = datetime(year=datetime.today().year, month=month, day=day)
+        if event_date < datetime.today():
+            event_date = datetime(year=datetime.today().year + 1, month=month, day=day)
+
+        event = {
+            "name": name,
+            "date": event_date.strftime("%Y-%m-%d"),
+        }
+
+        self._events.append(event)
+        _LOGGER.info("Added birthday to calendar: %s on %s", name, event["date"])
