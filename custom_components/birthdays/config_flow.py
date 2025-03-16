@@ -49,9 +49,11 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             _LOGGER.debug("User submitted data: %s", user_input)
 
+            name_cleaned = user_input[CONF_NAME].strip().lower()
+
             # Valider om fødselsdagen allerede eksisterer
-            existing_entries = {entry.data[CONF_NAME].lower() for entry in self._async_current_entries()}
-            if user_input[CONF_NAME].lower() in existing_entries:
+            existing_entries = {entry.data[CONF_NAME].strip().lower() for entry in self._async_current_entries()}
+            if name_cleaned in existing_entries:
                 errors["base"] = "duplicate_entry"
                 _LOGGER.warning("Duplicate entry detected for name: %s", user_input[CONF_NAME])
 
@@ -63,7 +65,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 _LOGGER.error("Invalid date provided: %s-%s-%s", user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
 
             if not errors:
-                return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
+                return self.async_create_entry(title=user_input[CONF_NAME].strip(), data=user_input)
 
         # Show the form for user input
         return self.async_show_form(
