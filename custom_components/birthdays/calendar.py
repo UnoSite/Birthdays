@@ -5,7 +5,7 @@ The calendar is always 'on' and will include events for each birthday.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from homeassistant.components.calendar import CalendarEntity
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.device_registry import DeviceEntryType
@@ -24,7 +24,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         entry: The configuration entry containing the user data.
         async_add_entities: Function to register new entities.
     """
-    _LOGGER.debug("Setting up calendar entity for Birthdays integration.")
+    _LOGGER.debug("Setting up Birthdays Calendar entity.")
 
     # Sørg for kun at tilføje kalenderen én gang
     if CALENDAR_ENTITY_ID not in hass.data.setdefault(DOMAIN, {}):
@@ -48,9 +48,7 @@ class BirthdaysCalendar(CalendarEntity):
 
     def __init__(self):
         """Initialize the calendar entity."""
-        self._name = CALENDAR_NAME
-        self._entity_id = CALENDAR_ENTITY_ID
-        self._events = []
+        self._attr_name = CALENDAR_NAME
         self._attr_unique_id = CALENDAR_ENTITY_ID
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, "birthdays_calendar")},
@@ -59,13 +57,14 @@ class BirthdaysCalendar(CalendarEntity):
             model="Calendar",
             entry_type=DeviceEntryType.SERVICE,
         )
+        self._events = []
 
-        _LOGGER.debug("Initialized BirthdaysCalendar with entity_id: %s", self._entity_id)
+        _LOGGER.debug("Initialized BirthdaysCalendar with entity_id: %s", CALENDAR_ENTITY_ID)
 
     @property
-    def name(self):
-        """Return the name of the calendar entity."""
-        return self._name
+    def entity_id(self):
+        """Ensure the entity_id is always 'calendar.birthdays'."""
+        return CALENDAR_ENTITY_ID
 
     @property
     def state(self):
@@ -73,13 +72,8 @@ class BirthdaysCalendar(CalendarEntity):
         return "on"
 
     @property
-    def unique_id(self):
-        """Return a unique ID for the calendar entity."""
-        return self._entity_id
-
-    @property
     def event(self):
-        """Return the next event in the calendar."""
+        """Return the next upcoming birthday event."""
         if not self._events:
             return None
         return min(self._events, key=lambda x: x["date"])
@@ -93,14 +87,19 @@ class BirthdaysCalendar(CalendarEntity):
             month (int): Month of birth.
             day (int): Day of birth.
         """
-        event_date = datetime(year=datetime.today().year, month=month, day=day)
-        if event_date < datetime.today():
-            event_date = datetime(year=datetime.today().year + 1, month=month, day=day)
+        today = datetime.today()
+        event_date = datetime(year=today.year, month=month, day=day)
+
+        # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
+        if event_date < today:
+            event_date = datetime(year=today.year + 1, month=month, day=day)
 
         event = {
             "name": name,
-            "date": event_date,
+            "date": event_date.strftime("%Y-%m-%d"),
+            "summary": f"🎂 {name}'s Birthday",
+            "all_day": True,
         }
 
         self._events.append(event)
-        _LOGGER.info("Added birthday to calendar: %s on %s", name, event_date.strftime("%Y-%m-%d"))
+        _LOGGER.info("Added birthday event: %s on %s", name, event["date"])
