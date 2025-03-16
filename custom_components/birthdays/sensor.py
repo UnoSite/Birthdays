@@ -9,10 +9,11 @@ This module creates multiple sensors for tracking birthdays:
 """
 
 import logging
-from datetime import datetime, timedelta
-from homeassistant.helpers.entity import Entity
+from datetime import datetime
+from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceEntryType
 from .const import *
 
 # Set up logging
@@ -30,15 +31,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     """
     config = entry.data
     name = config[CONF_NAME]
+    entry_id = entry.entry_id
 
     _LOGGER.debug("Setting up Birthday sensors for: %s", name)
 
     async_add_entities([
-        BirthdaySensor(config, "Name"),
-        BirthdaySensor(config, "Next birthday in"),
-        BirthdaySensor(config, "Date of birth"),
-        BirthdaySensor(config, "Number of years"),
-        BirthdaySensor(config, "Number of days"),
+        BirthdaySensor(config, entry_id, "Name"),
+        BirthdaySensor(config, entry_id, "Next birthday in"),
+        BirthdaySensor(config, entry_id, "Date of birth"),
+        BirthdaySensor(config, entry_id, "Number of years"),
+        BirthdaySensor(config, entry_id, "Number of days"),
     ])
 
     _LOGGER.info("Birthday sensors created for: %s", name)
@@ -46,17 +48,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class BirthdaySensor(Entity):
     """Representation of a Birthday Sensor."""
 
-    def __init__(self, config, sensor_type):
+    def __init__(self, config, entry_id, sensor_type):
         """Initialize the sensor.
 
         Args:
             config (dict): Configuration data containing name, birth date details.
+            entry_id (str): Unique ID of the integration instance.
             sensor_type (str): The type of sensor (Name, Next birthday, etc.).
         """
         self._name = f"birthdays_{config[CONF_NAME]}_{sensor_type.replace(' ', '_').lower()}"
         self._sensor_type = sensor_type
         self._state = None
         self._config = config
+        self._attr_unique_id = f"{entry_id}_{sensor_type.replace(' ', '_').lower()}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, entry_id)},
+            name=f"Birthday: {config[CONF_NAME]}",
+            manufacturer="Birthdays Integration",
+            model="Birthday Sensor",
+            entry_type=DeviceEntryType.SERVICE,
+        )
 
         _LOGGER.debug("Initialized BirthdaySensor: %s (%s)", self._name, sensor_type)
 
@@ -102,8 +113,3 @@ class BirthdaySensor(Entity):
     def state(self):
         """Return the current state of the sensor."""
         return self._state
-
-    @property
-    def unique_id(self):
-        """Return a unique ID for the sensor."""
-        return self._name
