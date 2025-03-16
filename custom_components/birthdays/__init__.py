@@ -60,18 +60,22 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
     # Remove device from device registry
-    device_registry = async_get_device_registry(hass)
-    device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
-    if device:
-        device_registry.async_remove_device(device.id)
-        _LOGGER.info("Removed device for entry: %s", entry.entry_id)
+    device_registry = await async_get_device_registry(hass)
+    if device_registry:
+        device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
+        if device:
+            device_registry.async_remove_device(device.id)
+            _LOGGER.info("Removed device for entry: %s", entry.entry_id)
+        else:
+            _LOGGER.warning("Device not found for entry: %s", entry.entry_id)
 
     # Unload associated platforms
     success = await hass.config_entries.async_forward_entry_unload(entry, ["sensor", "binary_sensor", "calendar"])
 
     # Remove entry data
-    if entry.entry_id in hass.data[DOMAIN]:
+    if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
         hass.data[DOMAIN].pop(entry.entry_id)
+        _LOGGER.info("Removed entry data for: %s", entry.entry_id)
 
     _LOGGER.info("Successfully unloaded Birthdays integration for entry: %s", entry.entry_id)
     return success
@@ -88,12 +92,12 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     _LOGGER.debug("Removing Birthdays integration entry: %s", entry.entry_id)
 
     # Remove calendar entity if it was the last instance
-    if CALENDAR_ENTITY_ID in hass.data.get(DOMAIN, {}):
+    if DOMAIN in hass.data and CALENDAR_ENTITY_ID in hass.data[DOMAIN]:
         hass.data[DOMAIN].pop(CALENDAR_ENTITY_ID)
         _LOGGER.info("Removed Birthdays calendar entity")
 
     # Remove domain data if no entries remain
-    if not hass.data[DOMAIN]:
+    if DOMAIN in hass.data and not hass.data[DOMAIN]:
         hass.data.pop(DOMAIN)
         _LOGGER.info("All Birthdays data removed from Home Assistant")
 
