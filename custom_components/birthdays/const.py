@@ -15,3 +15,10 @@ CONF_DAY = "day"        # Day of birth
 # Calendar details
 CALENDAR_NAME = "Birthdays"                 # Name of the calendar entity
 CALENDAR_ENTITY_ID = "calendar.birthdays"   # Entity ID for the calendar
+
+# Sensor entity name templates
+SENSOR_NAME_TEMPLATE = "sensor.birthdays_{name}_{sensor_type}"
+BINARY_SENSOR_NAME_TEMPLATE = "binary_sensor.birthdays_{name}_today"
+
+# Device identifiers
+DEVICE_ID_TEMPLATE = "birthdays_{name}"
