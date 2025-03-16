@@ -6,7 +6,7 @@ It returns `on` if the birth date matches the current day and month.
 
 import logging
 from datetime import datetime
-from homeassistant.helpers.entity import BinarySensorEntity
+from homeassistant.components.binary_sensor import BinarySensorEntity  # Rettet import
 from .const import *
 
 # Set up logging
