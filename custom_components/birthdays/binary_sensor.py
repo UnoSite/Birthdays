@@ -11,7 +11,6 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.device_registry import DeviceEntryType
 from .const import *
 
-# Set up logging
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -42,6 +41,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
             entry_id (str): Unique ID of the integration instance.
         """
         self._name = f"birthdays_{config[CONF_NAME]}_today"
+        self._entity_id = f"binary_sensor.birthdays_{config[CONF_NAME].lower()}_today"
         self._config = config
         self._state = False
         self._attr_unique_id = f"{entry_id}_today"
@@ -77,4 +77,9 @@ class BirthdayBinarySensor(BinarySensorEntity):
     @property
     def name(self):
         """Return the name of the entity."""
-        return self._name
+        return f"Birthday: {self._config[CONF_NAME]}"
+
+    @property
+    def entity_id(self):
+        """Ensure entity_id is correctly formatted."""
+        return self._entity_id
