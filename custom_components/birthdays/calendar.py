@@ -7,8 +7,6 @@ The calendar is always 'on' and will include events for each birthday.
 import logging
 from datetime import datetime
 from homeassistant.components.calendar import CalendarEntity
-from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.core import HomeAssistant
 from .const import *
 
@@ -50,13 +48,6 @@ class BirthdaysCalendar(CalendarEntity):
         """Initialize the calendar entity."""
         self._attr_name = CALENDAR_NAME
         self._attr_unique_id = CALENDAR_ENTITY_ID
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, "birthdays_calendar")},
-            name="Birthdays Calendar",
-            manufacturer="Birthdays Integration",
-            model="Calendar",
-            entry_type=DeviceEntryType.SERVICE,
-        )
         self._events = []
 
         _LOGGER.debug("Initialized BirthdaysCalendar.")
@@ -72,6 +63,13 @@ class BirthdaysCalendar(CalendarEntity):
         if not self._events:
             return None
         return min(self._events, key=lambda x: x["date"])
+
+    @property
+    def extra_state_attributes(self):
+        """Return state attributes for the calendar entity."""
+        return {
+            "events": self._events
+        }
 
     def add_event(self, name, year, month, day):
         """Add a birthday event to the calendar.
