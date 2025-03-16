@@ -28,19 +28,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         async_add_entities (function): Function to register new entities.
     """
     config = entry.data
-    name = config[CONF_NAME].lower().replace(" ", "_")
+    name_slug = config[CONF_NAME].lower().replace(" ", "_")
     entry_id = entry.entry_id
 
-    _LOGGER.debug("Setting up Birthday sensors for: %s", name)
+    _LOGGER.debug("Setting up Birthday sensors for: %s", name_slug)
 
     async_add_entities([
-        BirthdaySensor(config, entry_id, f"{name}_next", "Next birthday in"),
-        BirthdaySensor(config, entry_id, f"{name}_date", "Date of birth"),
-        BirthdaySensor(config, entry_id, f"{name}_years", "Number of years"),
-        BirthdaySensor(config, entry_id, f"{name}_days", "Number of days"),
+        BirthdaySensor(config, entry_id, f"{name_slug}_next", "Next birthday in"),
+        BirthdaySensor(config, entry_id, f"{name_slug}_date", "Date of birth"),
+        BirthdaySensor(config, entry_id, f"{name_slug}_years", "Number of years"),
+        BirthdaySensor(config, entry_id, f"{name_slug}_days", "Number of days"),
     ])
 
-    _LOGGER.info("Birthday sensors created for: %s", name)
+    _LOGGER.info("Birthday sensors created for: %s", name_slug)
 
 class BirthdaySensor(Entity):
     """Representation of a Birthday Sensor."""
@@ -54,12 +54,11 @@ class BirthdaySensor(Entity):
             entity_suffix (str): Suffix for the entity ID.
             sensor_type (str): The type of sensor (Next birthday, Date of birth, etc.).
         """
-        self._name = f"birthdays_{config[CONF_NAME].lower().replace(' ', '_')}_{entity_suffix}"
-        self._entity_id = f"sensor.birthdays_{config[CONF_NAME].lower().replace(' ', '_')}_{entity_suffix}"
+        self._attr_name = f"Birthday: {config[CONF_NAME]} - {sensor_type}"
+        self._attr_unique_id = f"{entry_id}_{entity_suffix}"
         self._sensor_type = sensor_type
         self._state = None
         self._config = config
-        self._attr_unique_id = f"{entry_id}_{entity_suffix}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=f"Birthday: {config[CONF_NAME]}",
@@ -68,8 +67,7 @@ class BirthdaySensor(Entity):
             entry_type=DeviceEntryType.SERVICE,
         )
 
-        _LOGGER.debug("Initialized BirthdaySensor: %s (%s)", self._name, sensor_type)
-
+        _LOGGER.debug("Initialized BirthdaySensor: %s (%s)", self._attr_name, sensor_type)
         self.update()
 
     def update(self):
@@ -77,7 +75,6 @@ class BirthdaySensor(Entity):
 
         This function calculates values based on the birth date.
         """
-        name = self._config[CONF_NAME]
         birth_date = datetime(self._config[CONF_YEAR], self._config[CONF_MONTH], self._config[CONF_DAY])
         today = datetime.today()
 
@@ -85,33 +82,21 @@ class BirthdaySensor(Entity):
             next_birthday = datetime(today.year, birth_date.month, birth_date.day)
             if next_birthday < today:
                 next_birthday = datetime(today.year + 1, birth_date.month, birth_date.day)
-            days_until = (next_birthday - today).days
-            self._state = days_until
-            _LOGGER.debug("Next birthday for %s in %d days", name, days_until)
+            self._state = (next_birthday - today).days
+            _LOGGER.debug("Next birthday for %s in %d days", self._config[CONF_NAME], self._state)
         elif self._sensor_type == "Date of birth":
             self._state = birth_date.strftime("%Y-%m-%d")
         elif self._sensor_type == "Number of years":
             age = today.year - birth_date.year
             if (today.month, today.day) < (birth_date.month, birth_date.day):
-                age -= 1  # Adjust if birthday hasn't occurred yet this year
+                age -= 1
             self._state = age
-            _LOGGER.debug("%s is %d years old", name, age)
+            _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], self._state)
         elif self._sensor_type == "Number of days":
-            days_lived = (today - birth_date).days
-            self._state = days_lived
-            _LOGGER.debug("%s has lived for %d days", name, days_lived)
-
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return f"Birthday: {self._config[CONF_NAME]} - {self._sensor_type}"
+            self._state = (today - birth_date).days
+            _LOGGER.debug("%s has lived for %d days", self._config[CONF_NAME], self._state)
 
     @property
     def state(self):
         """Return the current state of the sensor."""
         return self._state
-
-    @property
-    def entity_id(self):
-        """Ensure entity_id is correctly formatted."""
-        return self._entity_id
