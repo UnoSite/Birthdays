@@ -24,7 +24,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         async_add_entities: Function to register new entities.
     """
     _LOGGER.debug("Setting up binary sensor for entry: %s", entry.entry_id)
-    
+
     config = entry.data
     async_add_entities([BirthdayBinarySensor(config, entry.entry_id)])
 
@@ -40,10 +40,9 @@ class BirthdayBinarySensor(BinarySensorEntity):
             config (dict): Configuration data containing name, day, and month.
             entry_id (str): Unique ID of the integration instance.
         """
-        self._name = f"birthdays_{config[CONF_NAME]}_today"
-        self._entity_id = f"binary_sensor.birthdays_{config[CONF_NAME].lower()}_today"
-        self._config = config
-        self._state = False
+        name_slug = config[CONF_NAME].lower().replace(" ", "_")
+        
+        self._attr_name = f"Birthday: {config[CONF_NAME]}"
         self._attr_unique_id = f"{entry_id}_today"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -52,6 +51,8 @@ class BirthdayBinarySensor(BinarySensorEntity):
             model="Birthday Sensor",
             entry_type=DeviceEntryType.SERVICE,
         )
+        self._state = False
+        self._config = config
 
         _LOGGER.debug("Initialized BirthdayBinarySensor for: %s", config[CONF_NAME])
         self.update()
@@ -65,7 +66,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
         is_birthday = today.day == self._config[CONF_DAY] and today.month == self._config[CONF_MONTH]
 
         if is_birthday != self._state:
-            _LOGGER.debug("State change for %s: %s -> %s", self._name, self._state, is_birthday)
+            _LOGGER.debug("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
 
         self._state = is_birthday
 
@@ -75,11 +76,6 @@ class BirthdayBinarySensor(BinarySensorEntity):
         return self._state
 
     @property
-    def name(self):
-        """Return the name of the entity."""
-        return f"Birthday: {self._config[CONF_NAME]}"
-
-    @property
-    def entity_id(self):
-        """Ensure entity_id is correctly formatted."""
-        return self._entity_id
+    def state(self):
+        """Return the current state of the binary sensor."""
+        return self._state
