@@ -1,17 +1,17 @@
 {
-  "domain": "birthdays",
-  "name": "Birthdays",
-  "codeowners": [
-    "@UnoSite"
-  ],
-  "config_flow": true,
-  "dependencies": [],
-  "documentation": "https://github.com/UnoSite/Birthdays",
-  "iot_class": "local_polling",
-  "issue_tracker": "https://github.com/UnoSite/Birthdays/issues",
-  "loggers": [
-    "custom_components.isitpayday"
-  ],
-  "requirements": [],
-  "version": "0.0.0"
+    "domain": "birthdays",
+    "name": "Birthdays",
+    "codeowners": [
+        "@UnoSite"
+    ],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://github.com/UnoSite/Birthdays",
+    "iot_class": "local_polling",
+    "issue_tracker": "https://github.com/UnoSite/Birthdays/issues",
+    "loggers": [
+        "custom_components.isitpayday"
+    ],
+    "requirements": [],
+    "version": "0.1.0"
 }
