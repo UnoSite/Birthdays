@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.entity import DeviceInfo
-from homeassistant.helpers.device_registry import DeviceEntryType
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,16 +40,16 @@ class BirthdayBinarySensor(BinarySensorEntity):
             entry_id (str): Unique ID of the integration instance.
         """
         name_slug = config[CONF_NAME].lower().replace(" ", "_")
-        
+
         self._attr_name = f"Birthday: {config[CONF_NAME]}"
         self._attr_unique_id = f"{entry_id}_today"
-        self.entity_id = f"binary_sensor.birthdays_{name_slug}_today"
+        self.entity_id = BINARY_SENSOR_NAME_TEMPLATE.format(name=name_slug)
+        self._attr_icon = ICON_BINARY_SENSOR
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=f"Birthday: {config[CONF_NAME]}",
-            manufacturer="Birthdays Integration",
-            model="Birthday Sensor",
-            entry_type=DeviceEntryType.SERVICE,
+            manufacturer=MANUFACTURER,
+            model=MODEL,
         )
         self._state = False
         self._config = config
