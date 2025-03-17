@@ -7,7 +7,6 @@ Each configured birthday instance creates:
 - A sensor counting days until the next birthday.
 - A sensor showing the birth date.
 - A sensor showing the person's age.
-- A sensor counting total days since birth.
 - A calendar with all birthdays.
 
 Configuration is handled via the UI (Config Flow).
@@ -38,8 +37,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
-    # Forward setup to sensor, binary sensor, and calendar platforms
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
+    # Forward setup to platforms
+    for platform in ["sensor", "binary_sensor", "calendar"]:
+        hass.async_create_task(
+            hass.config_entries.async_forward_entry_setup(entry, platform)
+        )
 
     _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
     return True
@@ -59,7 +61,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
-    # Remove device from device registry (uden await!)
+    # Remove device from device registry
     device_registry = async_get_device_registry(hass)  # ✅ Ingen await!
     if device_registry:
         device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
@@ -69,8 +71,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             _LOGGER.warning("Device not found for entry: %s", entry.entry_id)
 
-    # Unload associated platforms
-    success = await hass.config_entries.async_forward_entry_unload(entry, ["sensor", "binary_sensor", "calendar"])
+    # Unload associated platforms én ad gangen for at undgå TypeError
+    success = all(
+        await hass.config_entries.async_forward_entry_unload(entry, platform)
+        for platform in ["sensor", "binary_sensor", "calendar"]
+    )
 
     # Remove entry data
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
