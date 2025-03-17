@@ -1,8 +1,4 @@
-"""Config flow for the Birthdays integration.
-
-This allows users to set up birthday tracking through Home Assistant's UI.
-Users can configure multiple instances, each representing a different person's birthday.
-"""
+"""Config flow for the Birthdays integration."""
 
 import logging
 import voluptuous as vol
@@ -11,7 +7,6 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from .const import *
 
-# Set up logging
 _LOGGER = logging.getLogger(__name__)
 
 # Get the current year
@@ -28,22 +23,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Handle the user setup step.
-
-        This step allows users to input:
-        - Name of the birthday person
-        - Year of birth
-        - Month of birth
-        - Day of birth
-
-        If valid data is provided, an entry is created in Home Assistant.
-
-        Args:
-            user_input (dict, optional): User-provided input. Defaults to None.
-
-        Returns:
-            FlowResult: A form for user input or an entry creation.
-        """
+        """Handle the user setup step."""
         errors = {}
 
         if user_input is not None:
@@ -51,13 +31,13 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             name_cleaned = user_input[CONF_NAME].strip().lower()
 
-            # Valider om fødselsdagen allerede eksisterer
+            # Check for duplicate entries
             existing_entries = {entry.data[CONF_NAME].strip().lower() for entry in self._async_current_entries()}
             if name_cleaned in existing_entries:
                 errors["base"] = "duplicate_entry"
                 _LOGGER.warning("Duplicate entry detected for name: %s", user_input[CONF_NAME])
 
-            # Valider, om datoen er gyldig
+            # Validate the date
             try:
                 datetime.date(user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
             except ValueError:
@@ -71,7 +51,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_NAME, default=""): str,
+                vol.Required(CONF_NAME): str,
                 vol.Required(CONF_YEAR, default=CURRENT_YEAR): vol.In(YEARS),
                 vol.Required(CONF_MONTH, default=1): vol.In(MONTHS),
                 vol.Required(CONF_DAY, default=1): vol.In(DAYS),
@@ -98,7 +78,16 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
 
         if user_input is not None:
             _LOGGER.debug("User updated data: %s", user_input)
-            return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
+
+            # Validate the new date input
+            try:
+                datetime.date(user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+            except ValueError:
+                errors["base"] = "invalid_date"
+                _LOGGER.error("Invalid date provided: %s-%s-%s", user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+
+            if not errors:
+                return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Hent de nuværende værdier fra config_entry
         current_config = self.config_entry.data
@@ -112,4 +101,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-        )
+    )
