@@ -5,9 +5,9 @@ It returns `on` if the birth date matches the current day and month.
 """
 
 import logging
-from datetime import datetime
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.helpers.entity import DeviceInfo
+import homeassistant.util.dt as dt_util
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     _LOGGER.debug("Setting up binary sensor for entry: %s", entry.entry_id)
 
     config = entry.data
-    async_add_entities([BirthdayBinarySensor(config, entry.entry_id)])
+    async_add_entities([BirthdayBinarySensor(config, entry.entry_id)], True)
 
     _LOGGER.info("Binary sensor added for: %s", config[CONF_NAME])
 
@@ -55,27 +55,21 @@ class BirthdayBinarySensor(BinarySensorEntity):
         self._config = config
 
         _LOGGER.debug("Initialized BirthdayBinarySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
-        self.update()
 
-    def update(self):
+    async def async_update(self):
         """Update binary sensor state.
 
         Checks if today matches the configured birthday and updates the state.
         """
-        today = datetime.today()
+        today = dt_util.now()
         is_birthday = today.day == self._config[CONF_DAY] and today.month == self._config[CONF_MONTH]
 
         if is_birthday != self._state:
             _LOGGER.debug("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
-
-        self._state = is_birthday
+            self._state = is_birthday
+            self.async_write_ha_state()
 
     @property
     def is_on(self):
         """Return True if today is the birthday."""
-        return self._state
-
-    @property
-    def state(self):
-        """Return the current state of the binary sensor."""
         return self._state
