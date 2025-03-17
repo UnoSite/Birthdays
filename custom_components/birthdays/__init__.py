@@ -62,7 +62,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
     # Remove device from device registry
-    device_registry = async_get_device_registry(hass)  # ✅ Ingen await!
+    device_registry = async_get_device_registry(hass)  # Ingen await!
     if device_registry:
         device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
         if device:
@@ -71,11 +71,13 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             _LOGGER.warning("Device not found for entry: %s", entry.entry_id)
 
-    # Unload associated platforms én ad gangen for at undgå TypeError
-    success = all(
-        await hass.config_entries.async_forward_entry_unload(entry, platform)
-        for platform in ["sensor", "binary_sensor", "calendar"]
-    )
+    # Unload associated platforms én ad gangen
+    unload_results = []
+    for platform in ["sensor", "binary_sensor", "calendar"]:
+        success = await hass.config_entries.async_forward_entry_unload(entry, platform)
+        unload_results.append(success)
+
+    success = all(unload_results)
 
     # Remove entry data
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
