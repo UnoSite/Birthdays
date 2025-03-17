@@ -7,7 +7,7 @@ This module creates multiple sensors for tracking birthdays:
 """
 
 import logging
-from datetime import datetime
+import homeassistant.util.dt as dt_util
 from homeassistant.helpers.entity import Entity, DeviceInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -35,7 +35,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         BirthdaySensor(config, entry_id, SENSOR_NAME_TEMPLATE.format(name=name_slug, sensor_type="next"), "Next birthday in", ICON_NEXT_BIRTHDAY),
         BirthdaySensor(config, entry_id, SENSOR_NAME_TEMPLATE.format(name=name_slug, sensor_type="date"), "Date of birth", ICON_DATE_OF_BIRTH),
         BirthdaySensor(config, entry_id, SENSOR_NAME_TEMPLATE.format(name=name_slug, sensor_type="years"), "Number of years", ICON_YEARS_OLD),
-    ])
+    ], True)
 
     _LOGGER.info("Birthday sensors created for: %s", name_slug)
 
@@ -58,7 +58,7 @@ class BirthdaySensor(Entity):
         self.entity_id = entity_id
         self._attr_icon = icon
         self._sensor_type = sensor_type
-        self._state = None
+        self._attr_state = None
         self._config = config
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -68,32 +68,28 @@ class BirthdaySensor(Entity):
         )
 
         _LOGGER.debug("Initialized BirthdaySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
-        self.update()
 
-    def update(self):
+    async def async_update(self):
         """Update sensor state.
 
         This function calculates values based on the birth date.
         """
-        birth_date = datetime(self._config[CONF_YEAR], self._config[CONF_MONTH], self._config[CONF_DAY])
-        today = datetime.today()
+        birth_date = dt_util.parse_datetime(f"{self._config[CONF_YEAR]}-{self._config[CONF_MONTH]:02d}-{self._config[CONF_DAY]:02d}T00:00:00Z")
+        today = dt_util.now()
 
         if self._sensor_type == "Next birthday in":
-            next_birthday = datetime(today.year, birth_date.month, birth_date.day)
+            next_birthday = birth_date.replace(year=today.year)
             if next_birthday < today:
-                next_birthday = datetime(today.year + 1, birth_date.month, birth_date.day)
-            self._state = (next_birthday - today).days
-            _LOGGER.debug("Next birthday for %s in %d days", self._config[CONF_NAME], self._state)
+                next_birthday = next_birthday.replace(year=today.year + 1)
+            self._attr_state = (next_birthday - today).days
+            _LOGGER.debug("Next birthday for %s in %d days", self._config[CONF_NAME], self._attr_state)
         elif self._sensor_type == "Date of birth":
-            self._state = birth_date.strftime("%Y-%m-%d")
+            self._attr_state = birth_date.strftime("%Y-%m-%d")
         elif self._sensor_type == "Number of years":
             age = today.year - birth_date.year
             if (today.month, today.day) < (birth_date.month, birth_date.day):
                 age -= 1
-            self._state = age
-            _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], self._state)
+            self._attr_state = age
+            _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], self._attr_state)
 
-    @property
-    def state(self):
-        """Return the current state of the sensor."""
-        return self._state
+        self.async_write_ha_state()
