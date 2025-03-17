@@ -1,0 +1,34 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Add a Birthday",
+                "description": "Enter the details for the birthday you want to track.",
+                "data": {
+                    "name": "Name",
+                    "year": "Year of birth",
+                    "month": "Month of birth",
+                    "day": "Day of birth"
+                }
+            }
+        },
+        "error": {
+            "duplicate_entry": "A birthday with this name already exists.",
+            "invalid_date": "The selected date is invalid."
+        }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Edit Birthday",
+                "description": "Update the birthday details.",
+                "data": {
+                    "name": "Name",
+                    "year": "Year of birth",
+                    "month": "Month of birth",
+                    "day": "Day of birth"
+                }
+            }
+        }
+    }
+}
