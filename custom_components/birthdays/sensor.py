@@ -33,9 +33,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     _LOGGER.debug("Setting up Birthday sensors for: %s", name_slug)
 
     async_add_entities([
-        BirthdaySensor(config, entry_id, f"{name_slug}_next", "Next birthday in"),
-        BirthdaySensor(config, entry_id, f"{name_slug}_date", "Date of birth"),
-        BirthdaySensor(config, entry_id, f"{name_slug}_years", "Number of years"),
+        BirthdaySensor(config, entry_id, f"sensor.birthdays_{name_slug}_next", "Next birthday in"),
+        BirthdaySensor(config, entry_id, f"sensor.birthdays_{name_slug}_date", "Date of birth"),
+        BirthdaySensor(config, entry_id, f"sensor.birthdays_{name_slug}_years", "Number of years"),
     ])
 
     _LOGGER.info("Birthday sensors created for: %s", name_slug)
@@ -43,29 +43,31 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class BirthdaySensor(Entity):
     """Representation of a Birthday Sensor."""
 
-    def __init__(self, config, entry_id, entity_suffix, sensor_type):
+    def __init__(self, config, entry_id, entity_id, sensor_type):
         """Initialize the sensor.
 
         Args:
             config (dict): Configuration data containing name, birth date details.
             entry_id (str): Unique ID of the integration instance.
-            entity_suffix (str): Suffix for the entity ID.
+            entity_id (str): Entity ID for the sensor.
             sensor_type (str): The type of sensor (Next birthday, Date of birth, etc.).
         """
-        self._attr_name = f"Birthday: {config[CONF_NAME]} - {sensor_type}"
-        self._attr_unique_id = f"{entry_id}_{entity_suffix}"
+        name = config[CONF_NAME]
+        self._attr_name = f"Birthday: {name} - {sensor_type}"
+        self._attr_unique_id = f"{entry_id}_{sensor_type.lower().replace(' ', '_')}"
+        self.entity_id = entity_id
         self._sensor_type = sensor_type
         self._state = None
         self._config = config
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
-            name=f"Birthday: {config[CONF_NAME]}",
+            name=f"Birthday: {name}",
             manufacturer="Birthdays Integration",
             model="Birthday Sensor",
             entry_type=DeviceEntryType.SERVICE,
         )
 
-        _LOGGER.debug("Initialized BirthdaySensor: %s (%s)", self._attr_name, sensor_type)
+        _LOGGER.debug("Initialized BirthdaySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
         self.update()
 
     def update(self):
