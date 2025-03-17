@@ -7,10 +7,13 @@
 [![Stars](https://img.shields.io/github/stars/UnoSite/Birthdays?style=for-the-badge)](#)
 [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/UnoSite/Birthdays/total?style=for-the-badge)](#)
 
-![Logo](https://github.com/UnoSite/Birthdays/blob/main/logo.png)
+[![Logo](https://github.com/UnoSite/Birthdays/blob/main/logo.png)](#)
 
-[![Sponsor Buy Me a Coffee](https://img.shields.io/badge/Sponsor-Buy_Me_a_Coffee-yellow?style=for-the-badge)](https://buymeacoffee.com/UnoSite)
-[![Sponsor PayPal.Me](https://img.shields.io/badge/Sponsor-PayPal.me-blue?style=for-the-badge)](https://paypal.me/UnoSite)
+[![Sponsor Github](https://img.shields.io/badge/Sponsor-Github-EA4AAA?style=for-the-badge&logo=githubsponsors)](https://github.com/sponsors/UnoSite)\
+[![Sponsor Buy Me a Coffee](https://img.shields.io/badge/Sponsor-By%20me%20a%20coffee-FFDD00?style=for-the-badge&logo=buymeacoffee
+)](https://buymeacoffee.com/UnoSite)\
+[![Sponsor PayPal.Me](https://img.shields.io/badge/Sponsor-paypal.me-003087?style=for-the-badge&logo=paypal
+)](https://paypal.me/UnoSite)
 
 ---
 
