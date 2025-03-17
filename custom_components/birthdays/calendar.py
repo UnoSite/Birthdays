@@ -5,6 +5,7 @@ The calendar is always 'on' and will include events for each birthday.
 """
 
 import logging
+import dataclasses
 from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -69,19 +70,19 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [event.__dict__ for event in self._events]
+            "events": [dataclasses.asdict(event) for event in self._events]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return events within a specific time range."""
         _LOGGER.debug("Fetching events between %s and %s", start_date, end_date)
 
-        # Konverter start- og slutdatoer til naive datetime-objekter og tilføj tidszone
-        start_date = dt_util.as_local(start_date)
-        end_date = dt_util.as_local(end_date)
+        # Konverter start- og slutdatoer til UTC
+        start_date = dt_util.as_utc(start_date)
+        end_date = dt_util.as_utc(end_date)
 
         return [
-            event.__dict__ for event in self._events
+            dataclasses.asdict(event) for event in self._events
             if start_date <= event.start <= end_date
         ]
 
@@ -95,11 +96,11 @@ class BirthdaysCalendar(CalendarEntity):
             day (int): Day of birth.
         """
         today = dt_util.now()
-        event_date = dt_util.as_local(datetime(today.year, month, day))
+        event_date = dt_util.as_utc(datetime(today.year, month, day))
 
         # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
         if event_date < today:
-            event_date = dt_util.as_local(datetime(today.year + 1, month, day))
+            event_date = dt_util.as_utc(datetime(today.year + 1, month, day))
 
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
