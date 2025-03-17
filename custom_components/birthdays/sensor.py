@@ -4,7 +4,6 @@ This module creates multiple sensors for tracking birthdays:
 - `sensor.birthdays_{name}_next`: Days until the next birthday.
 - `sensor.birthdays_{name}_date`: Birth date of the person.
 - `sensor.birthdays_{name}_years`: Age of the person.
-- `sensor.birthdays_{name}_days`: Number of days the person has lived.
 """
 
 import logging
@@ -37,7 +36,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         BirthdaySensor(config, entry_id, f"{name_slug}_next", "Next birthday in"),
         BirthdaySensor(config, entry_id, f"{name_slug}_date", "Date of birth"),
         BirthdaySensor(config, entry_id, f"{name_slug}_years", "Number of years"),
-        BirthdaySensor(config, entry_id, f"{name_slug}_days", "Number of days"),
     ])
 
     _LOGGER.info("Birthday sensors created for: %s", name_slug)
@@ -92,9 +90,6 @@ class BirthdaySensor(Entity):
                 age -= 1
             self._state = age
             _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], self._state)
-        elif self._sensor_type == "Number of days":
-            self._state = (today - birth_date).days
-            _LOGGER.debug("%s has lived for %d days", self._config[CONF_NAME], self._state)
 
     @property
     def state(self):
