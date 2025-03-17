@@ -71,6 +71,14 @@ class BirthdaysCalendar(CalendarEntity):
             "events": self._events
         }
 
+    async def async_get_events(self, hass, start_date, end_date):
+        """Return events within a specific time range."""
+        _LOGGER.debug("Fetching events between %s and %s", start_date, end_date)
+        return [
+            event for event in self._events
+            if start_date <= datetime.strptime(event["date"], "%Y-%m-%d") <= end_date
+        ]
+
     def add_event(self, name, year, month, day):
         """Add a birthday event to the calendar.
 
