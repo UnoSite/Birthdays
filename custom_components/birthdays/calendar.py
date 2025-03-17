@@ -5,7 +5,6 @@ The calendar is always 'on' and will include events for each birthday.
 """
 
 import logging
-import dataclasses
 from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
@@ -62,15 +61,22 @@ class BirthdaysCalendar(CalendarEntity):
     @property
     def event(self):
         """Return the next upcoming birthday event."""
-        if not self._events:
-            return None
-        return min(self._events, key=lambda x: x.start)
+        now = dt_util.now()
+        upcoming_events = [event for event in self._events if event.start >= now]
+        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [dataclasses.asdict(event) for event in self._events]
+            "events": [
+                {
+                    "summary": event.summary,
+                    "start": event.start.isoformat(),
+                    "end": event.end.isoformat()
+                }
+                for event in self._events
+            ]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -82,7 +88,12 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            dataclasses.asdict(event) for event in self._events
+            {
+                "summary": event.summary,
+                "start": event.start.isoformat(),
+                "end": event.end.isoformat()
+            }
+            for event in self._events
             if start_date <= event.start <= end_date
         ]
 
@@ -95,12 +106,12 @@ class BirthdaysCalendar(CalendarEntity):
             month (int): Month of birth.
             day (int): Day of birth.
         """
-        today = dt_util.now()
-        event_date = dt_util.as_utc(datetime(today.year, month, day))
+        now = dt_util.now().astimezone()  # Sørger for at tidszone er korrekt
+        event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
 
         # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
-        if event_date < today:
-            event_date = dt_util.as_utc(datetime(today.year + 1, month, day))
+        if event_date < now:
+            event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
 
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
