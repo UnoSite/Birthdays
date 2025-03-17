@@ -76,9 +76,9 @@ class BirthdaysCalendar(CalendarEntity):
         """Return events within a specific time range."""
         _LOGGER.debug("Fetching events between %s and %s", start_date, end_date)
 
-        # Konverter start- og slutdatoer til naive datetime-objekter for at undgå TypeError
-        start_date = dt_util.as_local(start_date).replace(tzinfo=None)
-        end_date = dt_util.as_local(end_date).replace(tzinfo=None)
+        # Konverter start- og slutdatoer til naive datetime-objekter og tilføj tidszone
+        start_date = dt_util.as_local(start_date)
+        end_date = dt_util.as_local(end_date)
 
         return [
             event.__dict__ for event in self._events
@@ -94,12 +94,12 @@ class BirthdaysCalendar(CalendarEntity):
             month (int): Month of birth.
             day (int): Day of birth.
         """
-        today = dt_util.now().replace(tzinfo=None)  # Sørger for tidszone-håndtering
-        event_date = datetime(year=today.year, month=month, day=day)
+        today = dt_util.now()
+        event_date = dt_util.as_local(datetime(today.year, month, day))
 
         # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
         if event_date < today:
-            event_date = datetime(year=today.year + 1, month=month, day=day)
+            event_date = dt_util.as_local(datetime(today.year + 1, month, day))
 
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
