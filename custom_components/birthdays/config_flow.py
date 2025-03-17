@@ -3,14 +3,15 @@
 import logging
 import voluptuous as vol
 import datetime
+import homeassistant.util.dt as dt_util
 from homeassistant import config_entries
 from homeassistant.core import callback
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
 
-# Get the current year
-CURRENT_YEAR = datetime.datetime.now().year
+# Get the current year dynamically
+CURRENT_YEAR = dt_util.now().year
 
 # Define selectable ranges for birth date input
 YEARS = list(range(CURRENT_YEAR, CURRENT_YEAR - 120, -1))  # Last 120 years
@@ -58,6 +59,10 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             }),
             errors=errors
         )
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Allow reconfiguration of an existing entry."""
+        return await self.async_step_init(user_input)
 
     @staticmethod
     @callback
