@@ -71,10 +71,10 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_NAME): str,
-                vol.Required(CONF_YEAR): vol.In(YEARS),
-                vol.Required(CONF_MONTH): vol.In(MONTHS),
-                vol.Required(CONF_DAY): vol.In(DAYS),
+                vol.Required(CONF_NAME, description={"placeholder": CONF_NAME_PLACEHOLDER}): str,
+                vol.Required(CONF_YEAR, description={"placeholder": CONF_YEAR_PLACEHOLDER}): vol.In(YEARS),
+                vol.Required(CONF_MONTH, description={"placeholder": CONF_MONTH_PLACEHOLDER}): vol.In(MONTHS),
+                vol.Required(CONF_DAY, description={"placeholder": CONF_DAY_PLACEHOLDER}): vol.In(DAYS),
             }),
             errors=errors
         )
