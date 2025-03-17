@@ -12,6 +12,12 @@ CONF_YEAR = "year"      # Year of birth
 CONF_MONTH = "month"    # Month of birth
 CONF_DAY = "day"        # Day of birth
 
+# Config Flow Placeholders
+CONF_NAME_PLACEHOLDER = "Enter name"
+CONF_YEAR_PLACEHOLDER = "Select birth year"
+CONF_MONTH_PLACEHOLDER = "Select birth month"
+CONF_DAY_PLACEHOLDER = "Select birth day"
+
 # Calendar details
 CALENDAR_NAME = "Birthdays"                 # Name of the calendar entity
 CALENDAR_ENTITY_ID = "calendar.birthdays"   # Entity ID for the calendar
