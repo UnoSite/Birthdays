@@ -69,7 +69,7 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [event.as_dict() for event in self._events]
+            "events": [event.__dict__ for event in self._events]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -81,7 +81,7 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_local(end_date).replace(tzinfo=None)
 
         return [
-            event.as_dict() for event in self._events
+            event.__dict__ for event in self._events
             if start_date <= event.start <= end_date
         ]
 
@@ -104,8 +104,7 @@ class BirthdaysCalendar(CalendarEntity):
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
             start=event_date,
-            end=event_date + timedelta(days=1),  # Slutter dagen efter for all-day events
-            all_day=True
+            end=event_date + timedelta(days=1)  # Slutter dagen efter for all-day events
         )
 
         self._events.append(event)
