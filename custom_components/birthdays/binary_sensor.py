@@ -44,6 +44,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
         
         self._attr_name = f"Birthday: {config[CONF_NAME]}"
         self._attr_unique_id = f"{entry_id}_today"
+        self.entity_id = f"binary_sensor.birthdays_{name_slug}_today"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=f"Birthday: {config[CONF_NAME]}",
@@ -54,7 +55,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
         self._state = False
         self._config = config
 
-        _LOGGER.debug("Initialized BirthdayBinarySensor for: %s", config[CONF_NAME])
+        _LOGGER.debug("Initialized BirthdayBinarySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
         self.update()
 
     def update(self):
