@@ -101,4 +101,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-    )
+        )
