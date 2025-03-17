@@ -71,10 +71,10 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
-                vol.Required(CONF_NAME, description={"placeholder": CONF_NAME_PLACEHOLDER}): str,
-                vol.Required(CONF_YEAR, description={"placeholder": CONF_YEAR_PLACEHOLDER}): vol.In(YEARS),
-                vol.Required(CONF_MONTH, description={"placeholder": CONF_MONTH_PLACEHOLDER}): vol.In(MONTHS),
-                vol.Required(CONF_DAY, description={"placeholder": CONF_DAY_PLACEHOLDER}): vol.In(DAYS),
+                vol.Required(CONF_NAME, default=""): str,
+                vol.Required(CONF_YEAR, default=CURRENT_YEAR): vol.In(YEARS),
+                vol.Required(CONF_MONTH, default=1): vol.In(MONTHS),
+                vol.Required(CONF_DAY, default=1): vol.In(DAYS),
             }),
             errors=errors
         )
@@ -94,4 +94,22 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
-        return self.async_show_form(step_id="init")
+        errors = {}
+
+        if user_input is not None:
+            _LOGGER.debug("User updated data: %s", user_input)
+            return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
+
+        # Hent de nuværende værdier fra config_entry
+        current_config = self.config_entry.data
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema({
+                vol.Required(CONF_NAME, default=current_config.get(CONF_NAME, "")): str,
+                vol.Required(CONF_YEAR, default=current_config.get(CONF_YEAR, CURRENT_YEAR)): vol.In(YEARS),
+                vol.Required(CONF_MONTH, default=current_config.get(CONF_MONTH, 1)): vol.In(MONTHS),
+                vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
+            }),
+            errors=errors
+        )
