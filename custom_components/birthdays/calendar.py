@@ -5,9 +5,9 @@ The calendar is always 'on' and will include events for each birthday.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
-from homeassistant.components.calendar import CalendarEntity
+from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from .const import *
 
@@ -63,13 +63,13 @@ class BirthdaysCalendar(CalendarEntity):
         """Return the next upcoming birthday event."""
         if not self._events:
             return None
-        return min(self._events, key=lambda x: x["date"])
+        return min(self._events, key=lambda x: x.start)
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": self._events
+            "events": [event.as_dict() for event in self._events]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -81,8 +81,8 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_local(end_date).replace(tzinfo=None)
 
         return [
-            event for event in self._events
-            if start_date <= datetime.strptime(event["date"], "%Y-%m-%d") <= end_date
+            event.as_dict() for event in self._events
+            if start_date <= event.start <= end_date
         ]
 
     def add_event(self, name, year, month, day):
@@ -101,12 +101,12 @@ class BirthdaysCalendar(CalendarEntity):
         if event_date < today:
             event_date = datetime(year=today.year + 1, month=month, day=day)
 
-        event = {
-            "name": name,
-            "date": event_date.strftime("%Y-%m-%d"),
-            "summary": f"🎂 {name}'s Birthday",
-            "all_day": True,
-        }
+        event = CalendarEvent(
+            summary=f"🎂 {name}'s Birthday",
+            start=event_date,
+            end=event_date + timedelta(days=1),  # Slutter dagen efter for all-day events
+            all_day=True
+        )
 
         self._events.append(event)
-        _LOGGER.info("Added birthday event: %s on %s", name, event["date"])
+        _LOGGER.info("Added birthday event: %s on %s", name, event.start.strftime("%Y-%m-%d"))
