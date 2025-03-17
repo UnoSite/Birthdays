@@ -6,6 +6,7 @@ The calendar is always 'on' and will include events for each birthday.
 
 import logging
 from datetime import datetime
+import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity
 from homeassistant.core import HomeAssistant
 from .const import *
@@ -74,6 +75,11 @@ class BirthdaysCalendar(CalendarEntity):
     async def async_get_events(self, hass, start_date, end_date):
         """Return events within a specific time range."""
         _LOGGER.debug("Fetching events between %s and %s", start_date, end_date)
+
+        # Konverter start- og slutdatoer til naive datetime-objekter for at undgå TypeError
+        start_date = dt_util.as_local(start_date).replace(tzinfo=None)
+        end_date = dt_util.as_local(end_date).replace(tzinfo=None)
+
         return [
             event for event in self._events
             if start_date <= datetime.strptime(event["date"], "%Y-%m-%d") <= end_date
@@ -88,7 +94,7 @@ class BirthdaysCalendar(CalendarEntity):
             month (int): Month of birth.
             day (int): Day of birth.
         """
-        today = datetime.today()
+        today = dt_util.now().replace(tzinfo=None)  # Sørger for tidszone-håndtering
         event_date = datetime(year=today.year, month=month, day=day)
 
         # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
