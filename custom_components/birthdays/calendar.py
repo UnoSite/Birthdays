@@ -3,7 +3,7 @@
 import logging
 from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
-from homeassistant.components.calendar import CalendarEntity
+from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from .const import *
 
@@ -49,14 +49,14 @@ class BirthdaysCalendar(CalendarEntity):
     def event(self):
         """Return the next upcoming birthday event."""
         now = dt_util.now()
-        upcoming_events = [event for event in self._events if event["start"] >= now]
-        return min(upcoming_events, key=lambda x: x["start"]) if upcoming_events else None
+        upcoming_events = [event for event in self._events if event.start >= now]
+        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": self._events  # Returner events som en liste af dictionaries
+            "events": [self._convert_event_to_dict(event) for event in self._events]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -69,22 +69,30 @@ class BirthdaysCalendar(CalendarEntity):
 
         return [
             event for event in self._events
-            if start_date <= event["start"] <= end_date
+            if start_date <= event.start <= end_date
         ]
 
     def add_event(self, name, year, month, day):
         """Add a birthday event to the calendar."""
-        now = dt_util.now().astimezone()  # Sørger for at tidszone er korrekt
+        now = dt_util.now().astimezone()
         event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
 
         if event_date < now:
             event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
 
-        event = {
-            "summary": f"🎂 {name}'s Birthday",
-            "start": event_date,
-            "end": event_date + timedelta(days=1),
-        }
+        event = CalendarEvent(
+            summary=f"🎂 {name}'s Birthday",
+            start=event_date,
+            end=event_date + timedelta(days=1),
+        )
 
         self._events.append(event)
-        _LOGGER.info("Added birthday event: %s on %s", name, event["start"].strftime("%Y-%m-%d"))
+        _LOGGER.info("Added birthday event: %s on %s", name, event.start.strftime("%Y-%m-%d"))
+
+    def _convert_event_to_dict(self, event):
+        """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
+        return {
+            "summary": event.summary,
+            "start": event.start.isoformat(),
+            "end": event.end.isoformat(),
+        }
