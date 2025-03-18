@@ -75,7 +75,8 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
 
     def __init__(self, config_entry):
         """Initialize the options flow handler."""
-        self.config_entry = config_entry
+        super().__init__()
+        self._config_entry = config_entry  # Korrekt måde at tilgå config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -95,7 +96,7 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Hent de nuværende værdier fra config_entry
-        current_config = self.config_entry.data
+        current_config = self._config_entry.data  # Nu bruger vi korrekt reference
 
         return self.async_show_form(
             step_id="init",
@@ -106,4 +107,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-        )
+    )
