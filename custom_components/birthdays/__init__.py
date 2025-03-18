@@ -37,11 +37,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
-    # Forward setup to platforms
-    for platform in ["sensor", "binary_sensor", "calendar"]:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, platform)
-        )
+    # Forward setup to platforms using async_forward_entry_setups
+    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
 
     _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
     return True
@@ -71,13 +68,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         else:
             _LOGGER.warning("Device not found for entry: %s", entry.entry_id)
 
-    # Unload associated platforms én ad gangen
-    unload_results = []
-    for platform in ["sensor", "binary_sensor", "calendar"]:
-        success = await hass.config_entries.async_forward_entry_unload(entry, platform)
-        unload_results.append(success)
-
-    success = all(unload_results)
+    # Unload associated platforms
+    success = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "calendar"])
 
     # Remove entry data
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
