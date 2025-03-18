@@ -1,8 +1,4 @@
-"""Calendar entity for the Birthdays integration.
-
-This calendar entity aggregates all birthdays into a single calendar.
-The calendar is always 'on' and will include events for each birthday.
-"""
+"""Calendar entity for the Birthdays integration."""
 
 import logging
 from datetime import datetime, timedelta
@@ -14,18 +10,9 @@ from .const import *
 _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
-    """Set up the calendar platform.
-
-    This function is called when a new instance of the integration is added.
-
-    Args:
-        hass: The Home Assistant instance.
-        entry: The configuration entry containing the user data.
-        async_add_entities: Function to register new entities.
-    """
+    """Set up the calendar platform."""
     _LOGGER.debug("Setting up Birthdays Calendar entity.")
 
-    # Sørg for kun at tilføje kalenderen én gang
     if CALENDAR_ENTITY_ID not in hass.data.setdefault(DOMAIN, {}):
         calendar = BirthdaysCalendar()
         hass.data[DOMAIN][CALENDAR_ENTITY_ID] = calendar
@@ -34,7 +21,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
-    # Tilføj fødselsdagen til kalenderen
     calendar.add_event(
         name=entry.data[CONF_NAME],
         year=entry.data[CONF_YEAR],
@@ -73,7 +59,7 @@ class BirthdaysCalendar(CalendarEntity):
                 {
                     "summary": event.summary,
                     "start": event.start.isoformat(),
-                    "end": event.end.isoformat()
+                    "end": event.end.isoformat(),
                 }
                 for event in self._events
             ]
@@ -83,40 +69,37 @@ class BirthdaysCalendar(CalendarEntity):
         """Return events within a specific time range."""
         _LOGGER.debug("Fetching events between %s and %s", start_date, end_date)
 
-        # Konverter start- og slutdatoer til UTC
-        start_date = dt_util.as_utc(start_date)
-        end_date = dt_util.as_utc(end_date)
+        start_date = dt_util.as_local(start_date)
+        end_date = dt_util.as_local(end_date)
 
         return [
             {
                 "summary": event.summary,
                 "start": event.start.isoformat(),
-                "end": event.end.isoformat()
+                "end": event.end.isoformat(),
             }
             for event in self._events
             if start_date <= event.start <= end_date
         ]
 
     def add_event(self, name, year, month, day):
-        """Add a birthday event to the calendar.
-
-        Args:
-            name (str): Name of the person.
-            year (int): Year of birth.
-            month (int): Month of birth.
-            day (int): Day of birth.
-        """
-        now = dt_util.now().astimezone()  # Sørger for at tidszone er korrekt
-        event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
+        """Add a birthday event to the calendar."""
+        now = dt_util.now().astimezone()
+        event_date = dt_util.as_local(datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo))
 
         # Hvis fødselsdagen allerede er passeret i år, sæt den til næste år
         if event_date < now:
-            event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
+            event_date = dt_util.as_local(datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo))
+
+        # Undgå dubletter
+        if any(event.summary == f"🎂 {name}'s Birthday" and event.start.date() == event_date.date() for event in self._events):
+            _LOGGER.warning("Duplicate birthday event for %s already exists. Skipping.", name)
+            return
 
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
             start=event_date,
-            end=event_date + timedelta(days=1)  # Slutter dagen efter for all-day events
+            end=event_date + timedelta(days=1),  # Slutter dagen efter for all-day events
         )
 
         self._events.append(event)
