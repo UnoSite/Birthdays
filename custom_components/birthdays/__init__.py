@@ -40,8 +40,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     entity_registry = async_get_entity_registry(hass)
 
-    # Tjek om Birthdays-kalenderen allerede findes
-    if CALENDAR_ENTITY_ID not in hass.data[DOMAIN]:
+    # Tjek om Birthdays-kalenderen allerede findes i entity_registry
+    calendar_exists = any(
+        entity.entity_id == CALENDAR_ENTITY_ID for entity in entity_registry.entities.values()
+    )
+
+    if not calendar_exists:
         _LOGGER.info("No existing Birthdays calendar found. Creating main instance.")
         await hass.config_entries.async_forward_entry_setups(entry, ["calendar", "binary_sensor"])
     else:
@@ -98,9 +102,15 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     _LOGGER.debug("Removing Birthdays integration entry: %s", entry.entry_id)
 
-    # Fjern kun kalenderen, hvis det er en separat instans (ikke hovedkalenderen)
-    if DOMAIN in hass.data and CALENDAR_ENTITY_ID in hass.data[DOMAIN]:
-        _LOGGER.info("Skipping removal of central Birthdays calendar.")
+    entity_registry = async_get_entity_registry(hass)
+
+    # Tjek om der stadig findes fødselsdage
+    remaining_entries = [
+        ent for ent in hass.config_entries.async_entries(DOMAIN) if ent.entry_id != entry.entry_id
+    ]
+
+    if not remaining_entries:
+        _LOGGER.info("Last birthday removed. Keeping Birthdays calendar.")
 
     # Fjern domænedata, hvis ingen entries er tilbage
     if DOMAIN in hass.data and not hass.data[DOMAIN]:
