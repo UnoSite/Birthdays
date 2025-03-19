@@ -17,7 +17,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         calendar = BirthdaysCalendar(hass)
         hass.data[DOMAIN][CALENDAR_ENTITY_ID] = calendar
         async_add_entities([calendar])
-        _LOGGER.info("Birthdays calendar entity added: %s", CALENDAR_ENTITY_ID)
+        _LOGGER.info(LOG_CALENDAR_CREATED, CALENDAR_ENTITY_ID)
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
@@ -80,6 +80,7 @@ class BirthdaysCalendar(CalendarEntity):
         now = dt_util.now().astimezone()
         event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
 
+        # Hvis fødselsdagen allerede er passeret i år, skub den til næste år
         if event_date < now:
             event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
 
@@ -89,16 +90,23 @@ class BirthdaysCalendar(CalendarEntity):
             end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
         )
 
-        # Erstat event, hvis den allerede findes for denne entry_id
+        # Opdater eller tilføj event for denne entry_id
         self._events[entry_id] = [event]
 
-        _LOGGER.info("Added/updated birthday event: %s on %s", name, event.start.strftime("%Y-%m-%d"))
+        _LOGGER.info(LOG_BIRTHDAY_ADDED, name, event.start.strftime("%Y-%m-%d"))
 
     def remove_event(self, entry_id):
         """Remove events related to a deleted birthday instance."""
         if entry_id in self._events:
             del self._events[entry_id]
-            _LOGGER.info("Removed birthday events for entry: %s", entry_id)
+            _LOGGER.info(LOG_BIRTHDAY_REMOVED, entry_id)
+
+        # Hvis der stadig er fødselsdage, behold kalenderen
+        if self._events:
+            return
+
+        # Hvis ingen fødselsdage tilbage, behold kalenderen, men markér den som tom
+        _LOGGER.info("All birthdays removed, but calendar entity remains.")
 
     def _convert_event_to_dict(self, event):
         """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
