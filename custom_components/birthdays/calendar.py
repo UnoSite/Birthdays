@@ -70,12 +70,13 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            event for event_list in self._events.values() for event in event_list
+            self._convert_event_to_dict(event)
+            for event_list in self._events.values() for event in event_list
             if start_date <= event.start <= end_date
         ]
 
     def add_event(self, entry_id, name, year, month, day):
-        """Add a birthday event to the calendar."""
+        """Add or update a birthday event in the calendar."""
         now = dt_util.now().astimezone()
         event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
 
@@ -85,29 +86,19 @@ class BirthdaysCalendar(CalendarEntity):
         event = CalendarEvent(
             summary=f"🎂 {name}'s Birthday",
             start=event_date,
-            end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis ved midnat
+            end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
         )
 
-        if entry_id not in self._events:
-            self._events[entry_id] = []
-        self._events[entry_id].append(event)
+        # Erstat event, hvis den allerede findes for denne entry_id
+        self._events[entry_id] = [event]
 
-        _LOGGER.info("Added birthday event: %s on %s", name, event.start.strftime("%Y-%m-%d"))
+        _LOGGER.info("Added/updated birthday event: %s on %s", name, event.start.strftime("%Y-%m-%d"))
 
     def remove_event(self, entry_id):
         """Remove events related to a deleted birthday instance."""
         if entry_id in self._events:
             del self._events[entry_id]
             _LOGGER.info("Removed birthday events for entry: %s", entry_id)
-
-        # Hvis der stadig er fødselsdage, behold kalenderen
-        if self._events:
-            return
-
-        # Hvis ingen fødselsdage tilbage, fjern kalenderen
-        if DOMAIN in self.hass.data and CALENDAR_ENTITY_ID in self.hass.data[DOMAIN]:
-            del self.hass.data[DOMAIN][CALENDAR_ENTITY_ID]
-            _LOGGER.info("Removed Birthdays calendar entity as no birthdays remain.")
 
     def _convert_event_to_dict(self, event):
         """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
