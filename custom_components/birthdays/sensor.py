@@ -14,7 +14,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
     config = entry.data
 
     # Tjek om nødvendige data er til stede
-    if not all(key in config for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+    required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
+    if not all(key in config for key in required_keys):
         _LOGGER.error("Missing required data in entry: %s", config)
         return
 
@@ -31,6 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     _LOGGER.info("Birthday sensors created for: %s", name_slug)
 
+
 class BirthdaySensor(Entity):
     """Representation of a Birthday Sensor."""
 
@@ -41,9 +43,11 @@ class BirthdaySensor(Entity):
         self._config = config
 
         # Tjek om nødvendige data er til stede
-        if not all(key in config for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+        required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
+        if not all(key in config for key in required_keys):
             _LOGGER.error("Missing required data in sensor configuration: %s", config)
             self._attr_name = "Unknown Birthday Sensor"
+            self._attr_native_value = None
             return
 
         name = config[CONF_NAME]
@@ -69,13 +73,18 @@ class BirthdaySensor(Entity):
         today = dt_util.now().date()
 
         # Tjek om nødvendige datooplysninger er til stede
-        if not all(key in self._config for key in [CONF_YEAR, CONF_MONTH, CONF_DAY]):
+        required_keys = [CONF_YEAR, CONF_MONTH, CONF_DAY]
+        if not all(key in self._config for key in required_keys):
             _LOGGER.error("Missing date information in sensor configuration: %s", self._config)
             return
 
-        birth_date = dt_util.parse_datetime(
-            f"{self._config[CONF_YEAR]}-{self._config[CONF_MONTH]:02d}-{self._config[CONF_DAY]:02d}T00:00:00Z"
-        ).date()
+        try:
+            birth_date = dt_util.parse_datetime(
+                f"{self._config[CONF_YEAR]}-{self._config[CONF_MONTH]:02d}-{self._config[CONF_DAY]:02d}T00:00:00Z"
+            ).date()
+        except ValueError as e:
+            _LOGGER.error("Error parsing birth date: %s", e)
+            return
 
         if self._sensor_type == "next":
             next_birthday = birth_date.replace(year=today.year)
