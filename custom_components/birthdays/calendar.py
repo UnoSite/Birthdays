@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,7 +105,7 @@ class BirthdaysCalendar(CalendarEntity):
 
         _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
 
-    def remove_event(self, entry_id):
+    async def remove_event(self, hass, entry_id):
         """Remove events related to a deleted birthday instance."""
         if entry_id in self._events:
             del self._events[entry_id]
@@ -114,8 +115,18 @@ class BirthdaysCalendar(CalendarEntity):
         if self._events:
             return
 
-        # Hvis ingen fødselsdage tilbage, behold kalenderen, men markér den som tom
-        _LOGGER.info("All birthdays removed, but calendar entity remains.")
+        # Hvis ingen fødselsdage tilbage, fjern kalenderen
+        _LOGGER.info("All birthdays removed, removing Birthdays calendar.")
+        await self._remove_calendar(hass)
+
+    async def _remove_calendar(self, hass):
+        """Remove the Birthdays calendar entity when the last birthday is deleted."""
+        entity_registry = async_get_entity_registry(hass)
+        calendar_entity = entity_registry.async_get(CALENDAR_ENTITY_ID)
+
+        if calendar_entity:
+            entity_registry.async_remove(calendar_entity.entity_id)
+            _LOGGER.info("Birthdays calendar entity removed.")
 
     def _convert_event_to_dict(self, event):
         """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
