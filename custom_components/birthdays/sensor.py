@@ -34,13 +34,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class BirthdaySensor(Entity):
     """Representation of a Birthday Sensor."""
 
+    should_poll = False  # Home Assistant skal ikke poll'e denne sensor
+
     def __init__(self, config, entry_id, sensor_type, friendly_name, icon):
         """Initialize the sensor."""
         self._config = config
 
         # Tjek om nødvendige data er til stede
-        if CONF_NAME not in config:
-            _LOGGER.error("Missing CONF_NAME in sensor configuration: %s", config)
+        if not all(key in config for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+            _LOGGER.error("Missing required data in sensor configuration: %s", config)
             self._attr_name = "Unknown Birthday Sensor"
             return
 
