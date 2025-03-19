@@ -40,7 +40,7 @@ class BirthdaysCalendar(CalendarEntity):
     def __init__(self, hass):
         """Initialize the calendar entity."""
         self.hass = hass
-        self._attr_name = DEFAULT_CALENDAR_NAME  # Bruger den korrekte konstant
+        self._attr_name = CALENDAR_NAME  # Bruger den korrekte konstant fra const.py
         self._attr_unique_id = CALENDAR_ENTITY_ID
         self._events = {}
 
