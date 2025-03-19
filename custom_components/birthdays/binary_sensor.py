@@ -25,12 +25,15 @@ async def async_setup_entry(hass, entry, async_add_entities):
     _LOGGER.debug("Setting up binary sensor for entry: %s", entry.entry_id)
 
     config = entry.data
-    async_add_entities([BirthdayBinarySensor(config, entry.entry_id)], True)
+    sensor = BirthdayBinarySensor(config, entry.entry_id)
+    async_add_entities([sensor], True)  # True for at kalde update med det samme
 
     _LOGGER.info("Binary sensor added for: %s", config[CONF_NAME])
 
 class BirthdayBinarySensor(BinarySensorEntity):
     """Binary sensor indicating if today is the birthday."""
+
+    should_poll = False  # Home Assistant skal ikke poll'e denne sensor
 
     def __init__(self, config, entry_id):
         """Initialize the binary sensor.
@@ -66,8 +69,8 @@ class BirthdayBinarySensor(BinarySensorEntity):
 
         if is_birthday != self._state:
             _LOGGER.debug("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
-            self._state = is_birthday
-            self.async_write_ha_state()
+
+        self._state = is_birthday
 
     @property
     def is_on(self):
