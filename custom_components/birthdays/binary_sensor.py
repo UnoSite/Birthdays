@@ -27,15 +27,16 @@ async def async_setup_entry(hass, entry, async_add_entities):
     config = entry.data
 
     # Tjek om nødvendige data er til stede
-    if not all(key in config for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
-        _LOGGER.error("Missing required data in entry: %s", config)
+    required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
+    if not all(key in config for key in required_keys):
+        _LOGGER.error("Missing required data in entry %s: %s", entry.entry_id, config)
         return
 
-    sensor = BirthdayBinarySensor(config, entry.entry_id, hass)
+    sensor = BirthdayBinarySensor(config, entry.entry_id)
     async_add_entities([sensor], True)  # True for at kalde update med det samme
 
     # Opdater global binary sensor "Birthday Today"
-    hass.async_create_task(update_global_birthday_sensor(hass))
+    await update_global_birthday_sensor(hass)
 
     _LOGGER.info("Binary sensor added for: %s", config.get(CONF_NAME, "Unknown"))
 
@@ -56,26 +57,27 @@ async def update_global_birthday_sensor(hass):
     # Opdater den globale binary sensor
     hass.states.async_set(BINARY_SENSOR_ENTITY_ID, state, {"friendly_name": BINARY_SENSOR_NAME})
 
+
 class BirthdayBinarySensor(BinarySensorEntity):
     """Binary sensor indicating if today is the birthday."""
 
     should_poll = False  # Home Assistant skal ikke poll'e denne sensor
 
-    def __init__(self, config, entry_id, hass):
+    def __init__(self, config, entry_id):
         """Initialize the binary sensor.
 
         Args:
             config (dict): Configuration data containing name, day, and month.
             entry_id (str): Unique ID of the integration instance.
-            hass (HomeAssistant): Home Assistant instance reference.
         """
         self._config = config
-        self.hass = hass
 
         # Tjek om nødvendige data er til stede
-        if CONF_NAME not in config:
-            _LOGGER.error("Missing CONF_NAME in binary sensor configuration: %s", config)
+        required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
+        if not all(key in config for key in required_keys):
+            _LOGGER.error("Missing required data in binary sensor configuration: %s", config)
             self._attr_name = "Unknown Birthday Sensor"
+            self._state = False
             return
 
         name = config[CONF_NAME]
@@ -103,7 +105,8 @@ class BirthdayBinarySensor(BinarySensorEntity):
         today = dt_util.now().date()
 
         # Tjek om nødvendige datooplysninger er til stede
-        if not all(key in self._config for key in [CONF_YEAR, CONF_MONTH, CONF_DAY]):
+        required_keys = [CONF_YEAR, CONF_MONTH, CONF_DAY]
+        if not all(key in self._config for key in required_keys):
             _LOGGER.error("Missing date information in binary sensor configuration: %s", self._config)
             return
 
@@ -115,7 +118,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
             self.async_write_ha_state()
 
             # Opdater global sensor "Birthday Today"
-            self.hass.async_create_task(update_global_birthday_sensor(self.hass))
+            await update_global_birthday_sensor(self.hass)
 
     @property
     def is_on(self):
