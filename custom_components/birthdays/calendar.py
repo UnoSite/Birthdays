@@ -66,7 +66,11 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [self._convert_event_to_dict(event) for event_list in self._events.values() for event in event_list]
+            "events": [
+                self._convert_event_to_dict(event)
+                for event_list in self._events.values() for event in event_list
+                if isinstance(event, CalendarEvent)
+            ]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -97,7 +101,7 @@ class BirthdaysCalendar(CalendarEntity):
         event = CalendarEvent(
             summary=f"🎂 {name} turns {age}",
             start=event_date,
-            end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
+            end=event_date + timedelta(days=1) - timedelta(seconds=1),
         )
 
         # Opdater eller tilføj event for denne entry_id
@@ -130,8 +134,12 @@ class BirthdaysCalendar(CalendarEntity):
 
     def _convert_event_to_dict(self, event):
         """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
+        if not isinstance(event, CalendarEvent):
+            _LOGGER.error("Invalid event type: %s", type(event))
+            return {}
+
         return {
             "summary": event.summary,
             "start": event.start.isoformat(),
             "end": event.end.isoformat(),
-        }
+                  }
