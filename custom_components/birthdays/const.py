@@ -12,15 +12,13 @@ CONF_YEAR = "year"      # Year of birth
 CONF_MONTH = "month"    # Month of birth
 CONF_DAY = "day"        # Day of birth
 
-# Config Flow Placeholders
-CONF_NAME_PLACEHOLDER = "Enter name"
-CONF_YEAR_PLACEHOLDER = "Select birth year"
-CONF_MONTH_PLACEHOLDER = "Select birth month"
-CONF_DAY_PLACEHOLDER = "Select birth day"
-
 # Calendar details
-CALENDAR_NAME = "Birthdays"                 # Name of the calendar entity
-CALENDAR_ENTITY_ID = "calendar.birthdays"   # Entity ID for the calendar
+DEFAULT_CALENDAR_NAME = "Birthdays"                # Default name for the calendar
+CALENDAR_ENTITY_ID = "calendar.birthdays"          # Fixed Entity ID for the calendar
+
+# Default Binary Sensor
+DEFAULT_BINARY_SENSOR_NAME = "Birthday Today"      # Default name for the binary sensor
+BINARY_SENSOR_ENTITY_ID = "binary_sensor.birthday_today"
 
 # Sensor entity name templates
 SENSOR_NAME_TEMPLATE = "sensor.birthdays_{name}_{sensor_type}"
