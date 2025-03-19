@@ -12,6 +12,12 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Set up the sensor platform."""
     config = entry.data
+
+    # Tjek om nødvendige data er til stede
+    if not all(key in config for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+        _LOGGER.error("Missing required data in entry: %s", config)
+        return
+
     name_slug = config[CONF_NAME].lower().replace(" ", "_")
     entry_id = entry.entry_id
 
@@ -30,6 +36,14 @@ class BirthdaySensor(Entity):
 
     def __init__(self, config, entry_id, sensor_type, friendly_name, icon):
         """Initialize the sensor."""
+        self._config = config
+
+        # Tjek om nødvendige data er til stede
+        if CONF_NAME not in config:
+            _LOGGER.error("Missing CONF_NAME in sensor configuration: %s", config)
+            self._attr_name = "Unknown Birthday Sensor"
+            return
+
         name = config[CONF_NAME]
         name_slug = name.lower().replace(" ", "_")
 
@@ -38,7 +52,6 @@ class BirthdaySensor(Entity):
         self.entity_id = f"sensor.birthdays_{name_slug}_{sensor_type}"
         self._attr_icon = icon
         self._sensor_type = sensor_type
-        self._config = config
         self._attr_native_value = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -52,6 +65,12 @@ class BirthdaySensor(Entity):
     async def async_update(self):
         """Update sensor state."""
         today = dt_util.now().date()
+
+        # Tjek om nødvendige datooplysninger er til stede
+        if not all(key in self._config for key in [CONF_YEAR, CONF_MONTH, CONF_DAY]):
+            _LOGGER.error("Missing date information in sensor configuration: %s", self._config)
+            return
+
         birth_date = dt_util.parse_datetime(
             f"{self._config[CONF_YEAR]}-{self._config[CONF_MONTH]:02d}-{self._config[CONF_DAY]:02d}T00:00:00Z"
         ).date()
