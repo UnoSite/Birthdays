@@ -35,26 +35,26 @@ async def async_setup_entry(hass, entry, async_add_entities):
     async_add_entities([sensor], True)  # True for at kalde update med det samme
 
     # Opdater global binary sensor "Birthday Today"
-    update_global_birthday_sensor(hass)
+    await update_global_birthday_sensor(hass)
 
     _LOGGER.info("Binary sensor added for: %s", config.get(CONF_NAME, "Unknown"))
 
 
-def update_global_birthday_sensor(hass):
+async def update_global_birthday_sensor(hass):
     """Update the global 'Birthday Today' binary sensor based on all birthdays."""
     today = dt_util.now().date()
 
-    # Hent alle eksisterende binary sensors i Home Assistant
+    # Hent alle eksisterende fødselsdagssensorer i Home Assistant
     birthday_sensors = [
         entity for entity in hass.states.async_all()
         if entity.entity_id.startswith("binary_sensor.birthdays_") and entity.state == "on"
     ]
 
-    # Hvis mindst én person har fødselsdag, skal global sensor være 'on'
+    # Hvis mindst én person har fødselsdag, skal den globale sensor være 'on'
     state = "on" if birthday_sensors else "off"
 
     # Opdater den globale binary sensor
-    hass.states.async_set(BINARY_SENSOR_ENTITY_ID, state, {"friendly_name": DEFAULT_BINARY_SENSOR_NAME})
+    hass.states.async_set(BINARY_SENSOR_ENTITY_ID, state, {"friendly_name": BINARY_SENSOR_NAME})
 
 class BirthdayBinarySensor(BinarySensorEntity):
     """Binary sensor indicating if today is the birthday."""
@@ -113,7 +113,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
             self.async_write_ha_state()
 
             # Opdater global sensor "Birthday Today"
-            update_global_birthday_sensor(self.hass)
+            await update_global_birthday_sensor(self.hass)
 
     @property
     def is_on(self):
