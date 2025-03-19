@@ -27,23 +27,26 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the user setup step."""
         errors = {}
 
-        # Hvis ingen kalender findes, opret en standard Birthdays instans
-        existing_calendars = [
-            entry for entry in self._async_current_entries() if entry.title == "Birthdays"
-        ]
-        if not existing_calendars:
+        # Tjek om en "Birthdays" instans allerede findes
+        existing_birthdays_entry = next(
+            (entry for entry in self._async_current_entries() if entry.title == "Birthdays"), None
+        )
+
+        if not existing_birthdays_entry:
+            _LOGGER.info("No existing Birthdays instance found. Creating default instance.")
             return self.async_create_entry(
                 title="Birthdays",
                 data={},
             )
 
+        # Hvis brugeren allerede har en "Birthdays"-kalender, fortsæt med at tilføje en fødselar
         if user_input is not None:
             _LOGGER.debug("User submitted data: %s", user_input)
 
             name_cleaned = user_input[CONF_NAME].strip().lower()
 
             # Check for duplicate entries
-            existing_entries = {entry.data[CONF_NAME].strip().lower() for entry in self._async_current_entries()}
+            existing_entries = {entry.data[CONF_NAME].strip().lower() for entry in self._async_current_entries() if CONF_NAME in entry.data}
             if name_cleaned in existing_entries:
                 errors["base"] = "duplicate_entry"
                 _LOGGER.warning("Duplicate entry detected for name: %s", user_input[CONF_NAME])
@@ -58,7 +61,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not errors:
                 return self.async_create_entry(title=user_input[CONF_NAME].strip(), data=user_input)
 
-        # Show the form for user input
+        # Vis UI-formular til at indtaste fødselar
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema({
@@ -117,4 +120,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-                )
+        )
