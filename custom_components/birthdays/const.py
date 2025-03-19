@@ -16,10 +16,6 @@ CONF_DAY = "day"        # Day of birth
 CALENDAR_NAME = "Birthdays"                 # Default name for the calendar
 CALENDAR_ENTITY_ID = "calendar.birthdays"   # Fixed Entity ID for the calendar
 
-# Default Binary Sensor
-BINARY_SENSOR_NAME = "Birthday Today"       # Name for the global binary sensor
-BINARY_SENSOR_ENTITY_ID = "binary_sensor.birthday_today"
-
 # Sensor entity name templates
 SENSOR_NAME_TEMPLATE = "sensor.birthdays_{name}_{sensor_type}"
 BINARY_SENSOR_NAME_TEMPLATE = "binary_sensor.birthdays_{name}_today"
