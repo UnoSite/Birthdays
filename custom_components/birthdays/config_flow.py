@@ -27,19 +27,6 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the user setup step."""
         errors = {}
 
-        # Tjek om en "Birthdays" instans allerede findes
-        existing_birthdays_entry = next(
-            (entry for entry in self._async_current_entries() if entry.title == "Birthdays"), None
-        )
-
-        if not existing_birthdays_entry:
-            _LOGGER.info("No existing Birthdays instance found. Creating default instance.")
-            return self.async_create_entry(
-                title="Birthdays",
-                data={},
-            )
-
-        # Hvis brugeren allerede har en "Birthdays"-kalender, fortsæt med at tilføje en fødselar
         if user_input is not None:
             _LOGGER.debug("User submitted data: %s", user_input)
 
@@ -47,8 +34,9 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Check for duplicate entries
             existing_entries = {
-                entry.data[CONF_NAME].strip().lower() 
-                for entry in self._async_current_entries() if CONF_NAME in entry.data
+                entry.data.get(CONF_NAME, "").strip().lower() 
+                for entry in self._async_current_entries()
+                if CONF_NAME in entry.data
             }
             if name_cleaned in existing_entries:
                 errors["base"] = "duplicate_entry"
@@ -56,7 +44,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Validate the date
             try:
-                birth_date = datetime.date(
+                datetime.date(
                     user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY]
                 )
             except ValueError:
@@ -91,13 +79,13 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Return the options flow handler."""
         return BirthdaysOptionsFlowHandler(config_entry)
 
+
 class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
     """Handles options for the Birthdays integration."""
 
     def __init__(self, config_entry):
         """Initialize the options flow handler."""
-        super().__init__()
-        self._config_entry = config_entry  # Korrekt reference til config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -108,7 +96,9 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
 
             # Validate the new date input
             try:
-                datetime.date(user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+                datetime.date(
+                    user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY]
+                )
             except ValueError:
                 errors["base"] = "invalid_date"
                 _LOGGER.error("Invalid date provided: %s-%s-%s", 
@@ -131,4 +121,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-    )
+        )
