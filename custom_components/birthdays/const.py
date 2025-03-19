@@ -12,12 +12,12 @@ CONF_YEAR = "year"      # Year of birth
 CONF_MONTH = "month"    # Month of birth
 CONF_DAY = "day"        # Day of birth
 
-# Calendar details
-DEFAULT_CALENDAR_NAME = "Birthdays"                # Default name for the calendar
-CALENDAR_ENTITY_ID = "calendar.birthdays"          # Fixed Entity ID for the calendar
+# Default calendar details
+CALENDAR_NAME = "Birthdays"                 # Default name for the calendar
+CALENDAR_ENTITY_ID = "calendar.birthdays"   # Fixed Entity ID for the calendar
 
 # Default Binary Sensor
-DEFAULT_BINARY_SENSOR_NAME = "Birthday Today"      # Default name for the binary sensor
+BINARY_SENSOR_NAME = "Birthday Today"       # Name for the global binary sensor
 BINARY_SENSOR_ENTITY_ID = "binary_sensor.birthday_today"
 
 # Sensor entity name templates
@@ -37,3 +37,9 @@ ICON_NEXT_BIRTHDAY = "mdi:calendar-clock"
 ICON_DATE_OF_BIRTH = "mdi:calendar"
 ICON_YEARS_OLD = "mdi:numeric"
 ICON_BINARY_SENSOR = "mdi:cake"
+
+# Logging messages
+LOG_BIRTHDAY_ADDED = "Added birthday event: %s on %s"
+LOG_BIRTHDAY_REMOVED = "Removed birthday events for entry: %s"
+LOG_CALENDAR_CREATED = "Birthdays calendar entity added: %s"
+LOG_CALENDAR_REMOVED = "Removed Birthdays calendar entity as no birthdays remain."
