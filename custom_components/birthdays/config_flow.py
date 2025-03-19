@@ -46,17 +46,25 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             name_cleaned = user_input[CONF_NAME].strip().lower()
 
             # Check for duplicate entries
-            existing_entries = {entry.data[CONF_NAME].strip().lower() for entry in self._async_current_entries() if CONF_NAME in entry.data}
+            existing_entries = {
+                entry.data[CONF_NAME].strip().lower() 
+                for entry in self._async_current_entries() if CONF_NAME in entry.data
+            }
             if name_cleaned in existing_entries:
                 errors["base"] = "duplicate_entry"
                 _LOGGER.warning("Duplicate entry detected for name: %s", user_input[CONF_NAME])
 
             # Validate the date
             try:
-                datetime.date(user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+                birth_date = datetime.date(
+                    user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY]
+                )
             except ValueError:
                 errors["base"] = "invalid_date"
-                _LOGGER.error("Invalid date provided: %s-%s-%s", user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+                _LOGGER.error("Invalid date provided: %s-%s-%s", 
+                              user_input[CONF_YEAR], 
+                              user_input[CONF_MONTH], 
+                              user_input[CONF_DAY])
 
             if not errors:
                 return self.async_create_entry(title=user_input[CONF_NAME].strip(), data=user_input)
@@ -103,7 +111,10 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 datetime.date(user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
             except ValueError:
                 errors["base"] = "invalid_date"
-                _LOGGER.error("Invalid date provided: %s-%s-%s", user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY])
+                _LOGGER.error("Invalid date provided: %s-%s-%s", 
+                              user_input[CONF_YEAR], 
+                              user_input[CONF_MONTH], 
+                              user_input[CONF_DAY])
 
             if not errors:
                 return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
@@ -120,4 +131,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-        )
+    )
