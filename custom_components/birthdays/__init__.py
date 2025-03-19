@@ -70,23 +70,21 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """
     _LOGGER.debug("Unloading Birthdays integration for entry: %s", entry.entry_id)
 
-    # Remove device from device registry
-    device_registry = async_get_device_registry(hass)  # Ingen await!
-    if device_registry:
-        device = device_registry.async_get_device({(DOMAIN, entry.entry_id)})
-        if device:
-            device_registry.async_remove_device(device.id)
-            _LOGGER.info("Removed device for entry: %s", entry.entry_id)
-        else:
-            _LOGGER.warning("Device not found for entry: %s", entry.entry_id)
+    # Fjern kun de sensorer og entiteter, der er knyttet til denne specifikke fødselar
+    success = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor"])
 
-    # Unload associated platforms
-    success = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "calendar"])
-
-    # Fjern entry data, men bevar kalenderen
+    # Fjern kun fødselarens data, men bevar kalenderen og den globale binary sensor
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
         hass.data[DOMAIN].pop(entry.entry_id)
         _LOGGER.info("Removed entry data for: %s", entry.entry_id)
+
+    # Tjek om der stadig er fødselsdage tilbage
+    remaining_entries = [
+        e for e in hass.config_entries.async_entries(DOMAIN) if e.entry_id != entry.entry_id
+    ]
+
+    if not remaining_entries:
+        _LOGGER.info("Last birthday instance removed, but keeping calendar and global binary sensor.")
 
     _LOGGER.info("Successfully unloaded Birthdays integration for entry: %s", entry.entry_id)
     return success
@@ -112,9 +110,8 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     if not remaining_entries:
         _LOGGER.info("Last birthday removed. Keeping Birthdays calendar.")
 
-    # Fjern domænedata, hvis ingen entries er tilbage
+    # Fjern domænedata, hvis ingen entries er tilbage, men bevar kalenderen
     if DOMAIN in hass.data and not hass.data[DOMAIN]:
-        hass.data.pop(DOMAIN)
-        _LOGGER.info("All Birthdays data removed from Home Assistant.")
+        _LOGGER.info("All individual birthday entries removed, but keeping calendar entity.")
 
     _LOGGER.info("Cleanup complete for Birthdays integration entry: %s", entry.entry_id)
