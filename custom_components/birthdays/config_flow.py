@@ -27,6 +27,16 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Handle the user setup step."""
         errors = {}
 
+        # Hvis ingen kalender findes, opret en standard Birthdays instans
+        existing_calendars = [
+            entry for entry in self._async_current_entries() if entry.title == "Birthdays"
+        ]
+        if not existing_calendars:
+            return self.async_create_entry(
+                title="Birthdays",
+                data={},
+            )
+
         if user_input is not None:
             _LOGGER.debug("User submitted data: %s", user_input)
 
@@ -76,7 +86,7 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry):
         """Initialize the options flow handler."""
         super().__init__()
-        self._config_entry = config_entry  # Korrekt måde at tilgå config_entry
+        self._config_entry = config_entry  # Korrekt reference til config_entry
 
     async def async_step_init(self, user_input=None):
         """Manage the options."""
@@ -96,7 +106,7 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Hent de nuværende værdier fra config_entry
-        current_config = self._config_entry.data  # Nu bruger vi korrekt reference
+        current_config = self._config_entry.data
 
         return self.async_show_form(
             step_id="init",
@@ -107,4 +117,4 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(DAYS),
             }),
             errors=errors
-    )
+                )
