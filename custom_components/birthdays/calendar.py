@@ -21,8 +21,9 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
-    # Hvis entry.data er tom eller mangler felter, logges en advarsel i stedet for en fejl
-    if entry.data and all(key in entry.data for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+    # Tjek om nødvendige data er til stede før tilføjelse af fødselsdag
+    required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
+    if all(key in entry.data for key in required_keys):
         calendar.add_event(
             entry_id=entry.entry_id,
             name=entry.data[CONF_NAME],
@@ -31,7 +32,7 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
             day=entry.data[CONF_DAY],
         )
     else:
-        _LOGGER.warning("Skipping event addition. Entry data missing required fields: %s", entry.entry_id)
+        _LOGGER.error("Skipping event addition. Entry data missing required fields: %s", entry.entry_id)
 
 
 class BirthdaysCalendar(CalendarEntity):
@@ -122,4 +123,4 @@ class BirthdaysCalendar(CalendarEntity):
             "summary": event.summary,
             "start": event.start.isoformat(),
             "end": event.end.isoformat(),
-    }
+        }
