@@ -31,11 +31,11 @@ async def async_setup_entry(hass, entry, async_add_entities):
         _LOGGER.error("Missing required data in entry: %s", config)
         return
 
-    sensor = BirthdayBinarySensor(config, entry.entry_id)
+    sensor = BirthdayBinarySensor(config, entry.entry_id, hass)
     async_add_entities([sensor], True)  # True for at kalde update med det samme
 
     # Opdater global binary sensor "Birthday Today"
-    await update_global_birthday_sensor(hass)
+    hass.async_create_task(update_global_birthday_sensor(hass))
 
     _LOGGER.info("Binary sensor added for: %s", config.get(CONF_NAME, "Unknown"))
 
@@ -61,14 +61,16 @@ class BirthdayBinarySensor(BinarySensorEntity):
 
     should_poll = False  # Home Assistant skal ikke poll'e denne sensor
 
-    def __init__(self, config, entry_id):
+    def __init__(self, config, entry_id, hass):
         """Initialize the binary sensor.
 
         Args:
             config (dict): Configuration data containing name, day, and month.
             entry_id (str): Unique ID of the integration instance.
+            hass (HomeAssistant): Home Assistant instance reference.
         """
         self._config = config
+        self.hass = hass
 
         # Tjek om nødvendige data er til stede
         if CONF_NAME not in config:
@@ -113,7 +115,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
             self.async_write_ha_state()
 
             # Opdater global sensor "Birthday Today"
-            await update_global_birthday_sensor(self.hass)
+            self.hass.async_create_task(update_global_birthday_sensor(self.hass))
 
     @property
     def is_on(self):
