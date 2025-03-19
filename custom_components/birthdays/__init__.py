@@ -16,6 +16,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Birthdays integration from a config entry.
 
     This function is called when a new instance of the integration is added.
-    It stores the configuration data and forwards the setup to relevant platforms.
+    It ensures that a central "Birthdays" calendar exists and forwards setup to sensors.
 
     Args:
         hass (HomeAssistant): The Home Assistant instance.
@@ -37,8 +38,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
-    # Forward setup to platforms using async_forward_entry_setups
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
+    entity_registry = async_get_entity_registry(hass)
+
+    # Tjek om Birthdays-kalenderen allerede findes
+    if CALENDAR_ENTITY_ID not in hass.data[DOMAIN]:
+        _LOGGER.info("No existing Birthdays calendar found. Creating main instance.")
+        await hass.config_entries.async_forward_entry_setups(entry, ["calendar", "binary_sensor"])
+    else:
+        _LOGGER.info("Existing Birthdays calendar found. Proceeding with config flow.")
+        await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
 
     _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
     return True
@@ -71,7 +79,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Unload associated platforms
     success = await hass.config_entries.async_unload_platforms(entry, ["sensor", "binary_sensor", "calendar"])
 
-    # Remove entry data
+    # Fjern entry data, men bevar kalenderen
     if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
         hass.data[DOMAIN].pop(entry.entry_id)
         _LOGGER.info("Removed entry data for: %s", entry.entry_id)
@@ -82,7 +90,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Handle cleanup when an entry is removed.
 
-    This function ensures the integration is completely cleaned up without requiring a restart.
+    Denne funktion sørger for, at den centrale "Birthdays" kalender **ikke fjernes** ved sidste fødselsdagssletning.
 
     Args:
         hass (HomeAssistant): The Home Assistant instance.
@@ -90,14 +98,13 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     _LOGGER.debug("Removing Birthdays integration entry: %s", entry.entry_id)
 
-    # Remove calendar entity if it was the last instance
+    # Fjern kun kalenderen, hvis det er en separat instans (ikke hovedkalenderen)
     if DOMAIN in hass.data and CALENDAR_ENTITY_ID in hass.data[DOMAIN]:
-        hass.data[DOMAIN].pop(CALENDAR_ENTITY_ID)
-        _LOGGER.info("Removed Birthdays calendar entity")
+        _LOGGER.info("Skipping removal of central Birthdays calendar.")
 
-    # Remove domain data if no entries remain
+    # Fjern domænedata, hvis ingen entries er tilbage
     if DOMAIN in hass.data and not hass.data[DOMAIN]:
         hass.data.pop(DOMAIN)
-        _LOGGER.info("All Birthdays data removed from Home Assistant")
+        _LOGGER.info("All Birthdays data removed from Home Assistant.")
 
     _LOGGER.info("Cleanup complete for Birthdays integration entry: %s", entry.entry_id)
