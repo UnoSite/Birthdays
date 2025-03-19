@@ -17,17 +17,22 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         calendar = BirthdaysCalendar(hass)
         hass.data[DOMAIN][CALENDAR_ENTITY_ID] = calendar
         async_add_entities([calendar])
-        _LOGGER.info(LOG_CALENDAR_CREATED, CALENDAR_ENTITY_ID)
+        _LOGGER.info("Birthdays calendar entity added: %s", CALENDAR_ENTITY_ID)
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
-    calendar.add_event(
-        entry_id=entry.entry_id,
-        name=entry.data[CONF_NAME],
-        year=entry.data[CONF_YEAR],
-        month=entry.data[CONF_MONTH],
-        day=entry.data[CONF_DAY],
-    )
+    # Sikrer, at entry.data indeholder nødvendige felter, før der tilføjes en fødselsdag
+    if all(key in entry.data for key in [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]):
+        calendar.add_event(
+            entry_id=entry.entry_id,
+            name=entry.data[CONF_NAME],
+            year=entry.data[CONF_YEAR],
+            month=entry.data[CONF_MONTH],
+            day=entry.data[CONF_DAY],
+        )
+    else:
+        _LOGGER.error("Missing required data fields in entry: %s", entry.entry_id)
+
 
 class BirthdaysCalendar(CalendarEntity):
     """Calendar for Birthdays."""
@@ -35,7 +40,7 @@ class BirthdaysCalendar(CalendarEntity):
     def __init__(self, hass):
         """Initialize the calendar entity."""
         self.hass = hass
-        self._attr_name = CALENDAR_NAME
+        self._attr_name = DEFAULT_CALENDAR_NAME  # Bruger den korrekte konstant
         self._attr_unique_id = CALENDAR_ENTITY_ID
         self._events = {}
 
@@ -84,8 +89,11 @@ class BirthdaysCalendar(CalendarEntity):
         if event_date < now:
             event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
 
+        # Beregn alderen, som personen fylder på deres næste fødselsdag
+        age = event_date.year - year
+
         event = CalendarEvent(
-            summary=f"🎂 {name}'s Birthday",
+            summary=f"🎂 {name} turns {age}",
             start=event_date,
             end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
         )
@@ -93,13 +101,13 @@ class BirthdaysCalendar(CalendarEntity):
         # Opdater eller tilføj event for denne entry_id
         self._events[entry_id] = [event]
 
-        _LOGGER.info(LOG_BIRTHDAY_ADDED, name, event.start.strftime("%Y-%m-%d"))
+        _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
 
     def remove_event(self, entry_id):
         """Remove events related to a deleted birthday instance."""
         if entry_id in self._events:
             del self._events[entry_id]
-            _LOGGER.info(LOG_BIRTHDAY_REMOVED, entry_id)
+            _LOGGER.info("Removed birthday events for entry: %s", entry_id)
 
         # Hvis der stadig er fødselsdage, behold kalenderen
         if self._events:
