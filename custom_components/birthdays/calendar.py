@@ -6,6 +6,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
+from dataclasses import asdict
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,7 +23,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
-    # Sikrer at alle felter er til stede før tilføjelse af fødselsdag
     try:
         year = int(entry.data[CONF_YEAR])
         month = int(entry.data[CONF_MONTH])
@@ -48,7 +48,7 @@ class BirthdaysCalendar(CalendarEntity):
         self.hass = hass
         self._attr_name = CALENDAR_NAME
         self._attr_unique_id = CALENDAR_ENTITY_ID
-        self._events = {}  # Kun CalendarEvent-objekter tillades
+        self._events = {}
 
         _LOGGER.debug("Initialized BirthdaysCalendar.")
 
@@ -67,19 +67,33 @@ class BirthdaysCalendar(CalendarEntity):
             for event in event_list
             if isinstance(event, CalendarEvent) and event.start >= now
         ]
-        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
+
+        if not upcoming_events:
+            return None
+
+        next_event = min(upcoming_events, key=lambda x: x.start)
+
+        if not isinstance(next_event, CalendarEvent):
+            _LOGGER.error("Invalid event found in BirthdaysCalendar: %s", next_event)
+            return None
+
+        return next_event
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
-        return {
-            "events": [
-                self._convert_event_to_dict(event)
-                for event_list in self._events.values()
-                for event in event_list
-                if isinstance(event, CalendarEvent)
-            ]
-        }
+        try:
+            return {
+                "events": [
+                    asdict(event)
+                    for event_list in self._events.values()
+                    for event in event_list
+                    if isinstance(event, CalendarEvent)
+                ]
+            }
+        except TypeError as e:
+            _LOGGER.error("Failed to convert events to dictionary: %s", e)
+            return {"error": "Failed to retrieve events"}
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return events within a specific time range."""
@@ -89,7 +103,7 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            self._convert_event_to_dict(event)
+            asdict(event)
             for event_list in self._events.values()
             for event in event_list
             if isinstance(event, CalendarEvent) and start_date <= event.start <= end_date
@@ -142,15 +156,3 @@ class BirthdaysCalendar(CalendarEntity):
             _LOGGER.info("Birthdays calendar entity removed.")
         else:
             _LOGGER.warning("Tried to remove non-existing Birthdays calendar entity.")
-
-    def _convert_event_to_dict(self, event):
-        """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
-        if not isinstance(event, CalendarEvent):
-            _LOGGER.error("Tried to convert a non-CalendarEvent object: %s", event)
-            return {}
-
-        return {
-            "summary": event.summary,
-            "start": event.start.isoformat(),
-            "end": event.end.isoformat(),
-        }
