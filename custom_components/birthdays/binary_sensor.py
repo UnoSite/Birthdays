@@ -28,8 +28,10 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     # Tjek om nødvendige data er til stede
     required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
-    if not all(key in config for key in required_keys):
-        _LOGGER.error("Missing required data in entry %s: %s", entry.entry_id, config)
+    missing_keys = [key for key in required_keys if key not in config]
+
+    if missing_keys:
+        _LOGGER.error("Missing required data in entry %s: %s", entry.entry_id, ", ".join(missing_keys))
         return
 
     sensor = BirthdayBinarySensor(config, entry.entry_id)
@@ -51,13 +53,16 @@ class BirthdayBinarySensor(BinarySensorEntity):
             entry_id (str): Unique ID of the integration instance.
         """
         self._config = config
+        self._state = None
 
         # Tjek om nødvendige data er til stede
         required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
-        if not all(key in config for key in required_keys):
-            _LOGGER.error("Missing required data in binary sensor configuration: %s", config)
+        missing_keys = [key for key in required_keys if key not in config]
+
+        if missing_keys:
+            _LOGGER.error("Missing required data in binary sensor configuration: %s", ", ".join(missing_keys))
             self._attr_name = "Unknown Birthday Sensor"
-            self._state = False
+            self._attr_available = False
             return
 
         name = config[CONF_NAME]
@@ -65,7 +70,6 @@ class BirthdayBinarySensor(BinarySensorEntity):
 
         self._attr_name = f"Birthday: {name}"
         self._attr_unique_id = f"{entry_id}_today"
-        self.entity_id = BINARY_SENSOR_NAME_TEMPLATE.format(name=name_slug)
         self._attr_icon = ICON_BINARY_SENSOR
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -73,27 +77,24 @@ class BirthdayBinarySensor(BinarySensorEntity):
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
-        self._state = False
+        self._attr_available = True
 
-        _LOGGER.debug("Initialized BirthdayBinarySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
+        _LOGGER.debug("Initialized BirthdayBinarySensor: %s", self._attr_name)
 
     async def async_update(self):
         """Update binary sensor state.
 
         Checks if today matches the configured birthday and updates the state.
         """
-        today = dt_util.now().date()
-
-        # Tjek om nødvendige datooplysninger er til stede
-        required_keys = [CONF_YEAR, CONF_MONTH, CONF_DAY]
-        if not all(key in self._config for key in required_keys):
-            _LOGGER.error("Missing date information in binary sensor configuration: %s", self._config)
+        if not self._attr_available:
+            _LOGGER.warning("Skipping update for %s because it's not available", self._attr_name)
             return
 
+        today = dt_util.now().date()
         is_birthday = today.day == self._config[CONF_DAY] and today.month == self._config[CONF_MONTH]
 
         if is_birthday != self._state:
-            _LOGGER.debug("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
+            _LOGGER.info("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
             self._state = is_birthday
             self.async_write_ha_state()
 
@@ -101,3 +102,8 @@ class BirthdayBinarySensor(BinarySensorEntity):
     def is_on(self):
         """Return True if today is the birthday."""
         return self._state
+
+    @property
+    def available(self):
+        """Return whether the sensor is available."""
+        return self._attr_available
