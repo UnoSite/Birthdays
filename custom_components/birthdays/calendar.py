@@ -6,17 +6,9 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from dataclasses import dataclass
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
-
-@dataclass
-class BirthdayCalendarEvent:
-    """Dataclass to structure the calendar events."""
-    summary: str
-    start: datetime
-    end: datetime
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform."""
@@ -36,9 +28,9 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         calendar.add_event(
             entry_id=entry.entry_id,
             name=entry.data[CONF_NAME],
-            year=entry.data[CONF_YEAR],
-            month=entry.data[CONF_MONTH],
-            day=entry.data[CONF_DAY],
+            year=int(entry.data[CONF_YEAR]),  # Sikrer, at det er et integer
+            month=int(entry.data[CONF_MONTH]),
+            day=int(entry.data[CONF_DAY]),
         )
     else:
         _LOGGER.error("Skipping event addition. Entry data missing required fields: %s", entry.entry_id)
@@ -52,7 +44,7 @@ class BirthdaysCalendar(CalendarEntity):
         self.hass = hass
         self._attr_name = CALENDAR_NAME
         self._attr_unique_id = CALENDAR_ENTITY_ID
-        self._events = {}
+        self._events = {}  # Skal kun indeholde CalendarEvent-objekter
 
         _LOGGER.debug("Initialized BirthdaysCalendar.")
 
@@ -66,7 +58,7 @@ class BirthdaysCalendar(CalendarEntity):
         """Return the next upcoming birthday event."""
         now = dt_util.now()
         upcoming_events = [
-            event for event_list in self._events.values() for event in event_list if event.start >= now
+            event for event_list in self._events.values() for event in event_list if isinstance(event, CalendarEvent) and event.start >= now
         ]
         return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
@@ -74,14 +66,7 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [
-                {
-                    "summary": event.summary,
-                    "start": event.start.isoformat(),
-                    "end": event.end.isoformat()
-                }
-                for event_list in self._events.values() for event in event_list
-            ]
+            "events": [self._convert_event_to_dict(event) for event_list in self._events.values() for event in event_list if isinstance(event, CalendarEvent)]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -92,13 +77,10 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            {
-                "summary": event.summary,
-                "start": event.start.isoformat(),
-                "end": event.end.isoformat()
-            }
-            for event_list in self._events.values() for event in event_list
-            if start_date <= event.start <= end_date
+            self._convert_event_to_dict(event)
+            for event_list in self._events.values()
+            for event in event_list
+            if isinstance(event, CalendarEvent) and start_date <= event.start <= end_date
         ]
 
     def add_event(self, entry_id, name, year, month, day):
@@ -113,10 +95,10 @@ class BirthdaysCalendar(CalendarEntity):
         # Beregn alderen, som personen fylder på deres næste fødselsdag
         age = event_date.year - year
 
-        event = BirthdayCalendarEvent(
+        event = CalendarEvent(
             summary=f"🎂 {name} turns {age}",
             start=event_date,
-            end=event_date + timedelta(days=1) - timedelta(seconds=1),
+            end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
         )
 
         # Opdater eller tilføj event for denne entry_id
@@ -140,9 +122,21 @@ class BirthdaysCalendar(CalendarEntity):
 
     async def _remove_calendar(self, hass):
         """Remove the Birthdays calendar entity when the last birthday is deleted."""
-        entity_registry = await async_get_entity_registry(hass)
+        entity_registry = async_get_entity_registry(hass)
         calendar_entity = entity_registry.async_get(CALENDAR_ENTITY_ID)
 
         if calendar_entity:
             entity_registry.async_remove(calendar_entity.entity_id)
             _LOGGER.info("Birthdays calendar entity removed.")
+
+    def _convert_event_to_dict(self, event):
+        """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
+        if not isinstance(event, CalendarEvent):
+            _LOGGER.error("Tried to convert a non-CalendarEvent object: %s", event)
+            return {}
+
+        return {
+            "summary": event.summary,
+            "start": event.start.isoformat(),
+            "end": event.end.isoformat(),
+    }
