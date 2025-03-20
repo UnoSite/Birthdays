@@ -22,18 +22,22 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     else:
         calendar = hass.data[DOMAIN][CALENDAR_ENTITY_ID]
 
-    # Tjek om nødvendige data er til stede før tilføjelse af fødselsdag
-    required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
-    if all(key in entry.data for key in required_keys):
+    # Sikrer at alle felter er til stede før tilføjelse af fødselsdag
+    try:
+        year = int(entry.data[CONF_YEAR])
+        month = int(entry.data[CONF_MONTH])
+        day = int(entry.data[CONF_DAY])
+        name = entry.data[CONF_NAME]
+
         calendar.add_event(
             entry_id=entry.entry_id,
-            name=entry.data[CONF_NAME],
-            year=int(entry.data[CONF_YEAR]),  # Sikrer, at det er et integer
-            month=int(entry.data[CONF_MONTH]),
-            day=int(entry.data[CONF_DAY]),
+            name=name,
+            year=year,
+            month=month,
+            day=day,
         )
-    else:
-        _LOGGER.error("Skipping event addition. Entry data missing required fields: %s", entry.entry_id)
+    except (KeyError, ValueError, TypeError) as e:
+        _LOGGER.error("Skipping event addition. Entry data missing or invalid: %s (%s)", entry.entry_id, e)
 
 
 class BirthdaysCalendar(CalendarEntity):
@@ -44,7 +48,7 @@ class BirthdaysCalendar(CalendarEntity):
         self.hass = hass
         self._attr_name = CALENDAR_NAME
         self._attr_unique_id = CALENDAR_ENTITY_ID
-        self._events = {}  # Skal kun indeholde CalendarEvent-objekter
+        self._events = {}  # Kun CalendarEvent-objekter tillades
 
         _LOGGER.debug("Initialized BirthdaysCalendar.")
 
@@ -58,7 +62,10 @@ class BirthdaysCalendar(CalendarEntity):
         """Return the next upcoming birthday event."""
         now = dt_util.now()
         upcoming_events = [
-            event for event_list in self._events.values() for event in event_list if isinstance(event, CalendarEvent) and event.start >= now
+            event
+            for event_list in self._events.values()
+            for event in event_list
+            if isinstance(event, CalendarEvent) and event.start >= now
         ]
         return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
@@ -66,7 +73,12 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [self._convert_event_to_dict(event) for event_list in self._events.values() for event in event_list if isinstance(event, CalendarEvent)]
+            "events": [
+                self._convert_event_to_dict(event)
+                for event_list in self._events.values()
+                for event in event_list
+                if isinstance(event, CalendarEvent)
+            ]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -88,37 +100,37 @@ class BirthdaysCalendar(CalendarEntity):
         now = dt_util.now().astimezone()
         event_date = datetime(now.year, month, day, 0, 0, tzinfo=now.tzinfo)
 
-        # Hvis fødselsdagen allerede er passeret i år, skub den til næste år
         if event_date < now:
             event_date = datetime(now.year + 1, month, day, 0, 0, tzinfo=now.tzinfo)
 
-        # Beregn alderen, som personen fylder på deres næste fødselsdag
         age = event_date.year - year
 
-        event = CalendarEvent(
-            summary=f"🎂 {name} turns {age}",
-            start=event_date,
-            end=event_date + timedelta(days=1) - timedelta(seconds=1),  # Slutter præcis kl. 23:59:59
-        )
+        try:
+            event = CalendarEvent(
+                summary=f"🎂 {name} turns {age}",
+                start=event_date,
+                end=event_date + timedelta(days=1) - timedelta(seconds=1),
+            )
 
-        # Opdater eller tilføj event for denne entry_id
-        self._events[entry_id] = [event]
-
-        _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
+            if isinstance(event, CalendarEvent):
+                self._events[entry_id] = [event]
+                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
+            else:
+                raise ValueError("Event creation failed")
+        except Exception as e:
+            _LOGGER.error("Failed to create CalendarEvent for %s: %s", name, e)
 
     async def remove_event(self, hass, entry_id):
         """Remove events related to a deleted birthday instance."""
         if entry_id in self._events:
             del self._events[entry_id]
             _LOGGER.info("Removed birthday events for entry: %s", entry_id)
+        else:
+            _LOGGER.warning("Tried to remove non-existing event for entry: %s", entry_id)
 
-        # Hvis der stadig er fødselsdage, behold kalenderen
-        if self._events:
-            return
-
-        # Hvis ingen fødselsdage tilbage, fjern kalenderen
-        _LOGGER.info("All birthdays removed, removing Birthdays calendar.")
-        await self._remove_calendar(hass)
+        if not self._events:
+            _LOGGER.info("All birthdays removed, removing Birthdays calendar.")
+            await self._remove_calendar(hass)
 
     async def _remove_calendar(self, hass):
         """Remove the Birthdays calendar entity when the last birthday is deleted."""
@@ -128,6 +140,8 @@ class BirthdaysCalendar(CalendarEntity):
         if calendar_entity:
             entity_registry.async_remove(calendar_entity.entity_id)
             _LOGGER.info("Birthdays calendar entity removed.")
+        else:
+            _LOGGER.warning("Tried to remove non-existing Birthdays calendar entity.")
 
     def _convert_event_to_dict(self, event):
         """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
@@ -139,4 +153,4 @@ class BirthdaysCalendar(CalendarEntity):
             "summary": event.summary,
             "start": event.start.isoformat(),
             "end": event.end.isoformat(),
-    }
+        }
