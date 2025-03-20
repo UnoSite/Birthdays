@@ -15,8 +15,6 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup_entry(hass, entry, async_add_entities):
     """Set up the binary sensor platform.
 
-    This function is called when a new instance of the integration is added.
-
     Args:
         hass: The Home Assistant instance.
         entry: The configuration entry containing the user data.
@@ -35,7 +33,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
         return
 
     sensor = BirthdayBinarySensor(config, entry.entry_id)
-    async_add_entities([sensor], True)  # True for at kalde update med det samme
+    async_add_entities([sensor], True)  # True for at opdatere med det samme
 
     _LOGGER.info("Binary sensor added for: %s", config.get(CONF_NAME, "Unknown"))
 
@@ -52,6 +50,8 @@ class BirthdayBinarySensor(BinarySensorEntity):
             config (dict): Configuration data containing name, day, and month.
             entry_id (str): Unique ID of the integration instance.
         """
+        super().__init__()
+
         self._config = config
         self._state = None
 
@@ -70,6 +70,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
 
         self._attr_name = f"Birthday: {name}"
         self._attr_unique_id = f"{entry_id}_today"
+        self.entity_id = BINARY_SENSOR_NAME_TEMPLATE.format(name=name_slug)  # Tilføjet entity_id
         self._attr_icon = ICON_BINARY_SENSOR
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -79,7 +80,7 @@ class BirthdayBinarySensor(BinarySensorEntity):
         )
         self._attr_available = True
 
-        _LOGGER.debug("Initialized BirthdayBinarySensor: %s", self._attr_name)
+        _LOGGER.debug("Initialized BirthdayBinarySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
 
     async def async_update(self):
         """Update binary sensor state.
@@ -96,7 +97,9 @@ class BirthdayBinarySensor(BinarySensorEntity):
         if is_birthday != self._state:
             _LOGGER.info("State change for %s: %s -> %s", self._attr_name, self._state, is_birthday)
             self._state = is_birthday
-            self.async_write_ha_state()
+
+            if self.hass:
+                self.async_write_ha_state()
 
     @property
     def is_on(self):
