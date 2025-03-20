@@ -3,11 +3,10 @@
 import logging
 from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
-from homeassistant.components.calendar import CalendarEntity
-from homeassistant.components.calendar import CalendarEvent as HA_CalendarEvent
+from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,6 +17,7 @@ class BirthdayCalendarEvent:
     summary: str
     start: datetime
     end: datetime
+    all_day: bool = True  # Home Assistant kræver en 'all_day' attribut
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform."""
@@ -82,7 +82,7 @@ class BirthdaysCalendar(CalendarEntity):
         """Return state attributes for the calendar entity."""
         return {
             "events": [
-                self._convert_event_to_dict(event)
+                asdict(event)  # Brug Home Assistant's forventede format
                 for event_list in self._events.values()
                 for event in event_list
                 if isinstance(event, BirthdayCalendarEvent)
@@ -97,7 +97,7 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            self._convert_event_to_dict(event)
+            asdict(event)  # Brug dataclass conversion
             for event_list in self._events.values()
             for event in event_list
             if isinstance(event, BirthdayCalendarEvent) and start_date <= event.start <= end_date
@@ -150,16 +150,3 @@ class BirthdaysCalendar(CalendarEntity):
             _LOGGER.info("Birthdays calendar entity removed.")
         else:
             _LOGGER.warning("Tried to remove non-existing Birthdays calendar entity.")
-
-    def _convert_event_to_dict(self, event):
-        """Convert BirthdayCalendarEvent to a dictionary format expected by Home Assistant."""
-        if not isinstance(event, BirthdayCalendarEvent):
-            _LOGGER.error("Tried to convert a non-BirthdayCalendarEvent object: %s", event)
-            return {}
-
-        return {
-            "summary": event.summary,
-            "start": event.start.isoformat(),
-            "end": event.end.isoformat(),
-            "all_day": True,
-        }
