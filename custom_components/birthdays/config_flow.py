@@ -66,7 +66,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME): str,
-                vol.Required(CONF_YEAR, default=str(CURRENT_YEAR)): str,  # Tekstfelt til årstal
+                vol.Required(CONF_YEAR): str,  # Tekstfelt til årstal
                 vol.Required(CONF_MONTH, default=1): vol.In(range(1, 13)),  # Dropdown
                 vol.Required(CONF_DAY, default=1): vol.In(range(1, 32)),  # Dropdown
             }),
@@ -126,7 +126,7 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME, default=current_config.get(CONF_NAME, "")): str,
-                vol.Required(CONF_YEAR, default=str(current_config.get(CONF_YEAR, CURRENT_YEAR))): str,  # Tekstfelt til årstal
+                vol.Required(CONF_YEAR, default=str(current_config.get(CONF_YEAR, ""))): str,  # Tekstfelt til årstal
                 vol.Required(CONF_MONTH, default=current_config.get(CONF_MONTH, 1)): vol.In(range(1, 13)),
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(range(1, 32)),
             }),
