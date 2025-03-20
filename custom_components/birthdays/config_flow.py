@@ -13,9 +13,6 @@ _LOGGER = logging.getLogger(__name__)
 # Get the current year dynamically
 CURRENT_YEAR = dt_util.now().year
 
-# Define valid input ranges
-YEARS_RANGE = (CURRENT_YEAR - 120, CURRENT_YEAR)  # Acceptable range for year input
-
 class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Birthdays integration."""
 
@@ -33,14 +30,11 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "missing_name"
                 _LOGGER.warning("User attempted to submit an empty name.")
 
-            # Validate the year input
-            try:
-                year = int(user_input[CONF_YEAR])
-                if year < YEARS_RANGE[0] or year > YEARS_RANGE[1]:
-                    raise ValueError("Year out of range")
-            except (ValueError, TypeError):
+            # Validate year input (should be a 4-digit number up to CURRENT_YEAR)
+            year_input = user_input.get(CONF_YEAR, "").strip()
+            if not year_input.isdigit() or not (1000 <= int(year_input) <= CURRENT_YEAR):
                 errors["base"] = "invalid_year"
-                _LOGGER.error("Invalid year provided: %s", user_input.get(CONF_YEAR, "N/A"))
+                _LOGGER.error("Invalid year provided: %s", year_input)
 
             # Check for duplicate entries
             existing_entries = {
@@ -55,13 +49,16 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Validate the date
             try:
                 datetime.date(
-                    user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY]
+                    int(user_input[CONF_YEAR]), 
+                    user_input[CONF_MONTH], 
+                    user_input[CONF_DAY]
                 )
-            except ValueError as e:
+            except (ValueError, TypeError) as e:
                 errors["base"] = "invalid_date"
                 _LOGGER.error("Invalid date provided (%s): %s", user_input, e)
 
             if not errors:
+                user_input[CONF_YEAR] = int(user_input[CONF_YEAR])  # Ensure it is stored as an integer
                 return self.async_create_entry(title=name, data=user_input)
 
         # Vis UI-formular til at indtaste fødselar
@@ -69,9 +66,9 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME): str,
-                vol.Required(CONF_YEAR, default=CURRENT_YEAR): vol.All(vol.Coerce(int), vol.Range(min=YEARS_RANGE[0], max=YEARS_RANGE[1])),
-                vol.Required(CONF_MONTH, default=1): vol.In(range(1, 13)),  # Month selection remains a dropdown
-                vol.Required(CONF_DAY, default=1): vol.In(range(1, 32)),  # Day selection remains a dropdown
+                vol.Required(CONF_YEAR, default=str(CURRENT_YEAR)): str,  # Tekstfelt til årstal
+                vol.Required(CONF_MONTH, default=1): vol.In(range(1, 13)),  # Dropdown
+                vol.Required(CONF_DAY, default=1): vol.In(range(1, 32)),  # Dropdown
             }),
             errors=errors
         )
@@ -101,25 +98,25 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             _LOGGER.debug("User updated data: %s", user_input)
 
-            # Validate the year input
-            try:
-                year = int(user_input[CONF_YEAR])
-                if year < YEARS_RANGE[0] or year > YEARS_RANGE[1]:
-                    raise ValueError("Year out of range")
-            except (ValueError, TypeError):
+            # Validate year input (should be a 4-digit number up to CURRENT_YEAR)
+            year_input = user_input.get(CONF_YEAR, "").strip()
+            if not year_input.isdigit() or not (1000 <= int(year_input) <= CURRENT_YEAR):
                 errors["base"] = "invalid_year"
-                _LOGGER.error("Invalid year provided: %s", user_input.get(CONF_YEAR, "N/A"))
+                _LOGGER.error("Invalid year provided: %s", year_input)
 
             # Validate the new date input
             try:
                 datetime.date(
-                    user_input[CONF_YEAR], user_input[CONF_MONTH], user_input[CONF_DAY]
+                    int(user_input[CONF_YEAR]), 
+                    user_input[CONF_MONTH], 
+                    user_input[CONF_DAY]
                 )
-            except ValueError as e:
+            except (ValueError, TypeError) as e:
                 errors["base"] = "invalid_date"
                 _LOGGER.error("Invalid date provided (%s): %s", user_input, e)
 
             if not errors:
+                user_input[CONF_YEAR] = int(user_input[CONF_YEAR])  # Ensure it is stored as an integer
                 return self.async_create_entry(title=user_input[CONF_NAME], data=user_input)
 
         # Hent de nuværende værdier fra config_entry
@@ -129,7 +126,7 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME, default=current_config.get(CONF_NAME, "")): str,
-                vol.Required(CONF_YEAR, default=current_config.get(CONF_YEAR, CURRENT_YEAR)): vol.All(vol.Coerce(int), vol.Range(min=YEARS_RANGE[0], max=YEARS_RANGE[1])),
+                vol.Required(CONF_YEAR, default=str(current_config.get(CONF_YEAR, CURRENT_YEAR))): str,  # Tekstfelt til årstal
                 vol.Required(CONF_MONTH, default=current_config.get(CONF_MONTH, 1)): vol.In(range(1, 13)),
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(range(1, 32)),
             }),
