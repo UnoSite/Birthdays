@@ -42,6 +42,8 @@ class BirthdaySensor(Entity):
 
     def __init__(self, config, entry_id, sensor_type, friendly_name, icon):
         """Initialize the sensor."""
+        super().__init__()
+
         self._config = config
         self._sensor_type = sensor_type
         self._attr_native_value = None
@@ -57,9 +59,11 @@ class BirthdaySensor(Entity):
             return
 
         name = config[CONF_NAME]
+        name_slug = name.lower().replace(" ", "_")
 
         self._attr_name = f"Birthday: {name} - {friendly_name}"
         self._attr_unique_id = f"{entry_id}_{sensor_type}"
+        self.entity_id = SENSOR_NAME_TEMPLATE.format(name=name_slug, sensor_type=sensor_type)  # Tilføjet entity_id
         self._attr_icon = icon
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
@@ -69,7 +73,7 @@ class BirthdaySensor(Entity):
         )
         self._attr_available = True
 
-        _LOGGER.debug("Initialized BirthdaySensor: %s", self._attr_name)
+        _LOGGER.debug("Initialized BirthdaySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
 
     async def async_update(self):
         """Update sensor state."""
@@ -109,7 +113,9 @@ class BirthdaySensor(Entity):
         if new_value != self._attr_native_value:
             _LOGGER.info("Updating %s: %s -> %s", self._attr_name, self._attr_native_value, new_value)
             self._attr_native_value = new_value
-            self.async_write_ha_state()
+
+            if self.hass:
+                self.async_write_ha_state()
 
     @property
     def available(self):
