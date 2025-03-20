@@ -6,7 +6,7 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from dataclasses import asdict
+from dataclasses import dataclass, field
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,15 +29,27 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         day = int(entry.data[CONF_DAY])
         name = entry.data[CONF_NAME]
 
-        calendar.add_event(
-            entry_id=entry.entry_id,
-            name=name,
-            year=year,
-            month=month,
-            day=day,
-        )
+        calendar.add_event(entry.entry_id, name, year, month, day)
     except (KeyError, ValueError, TypeError) as e:
         _LOGGER.error("Skipping event addition. Entry data missing or invalid: %s (%s)", entry.entry_id, e)
+
+
+@dataclass
+class BirthdayCalendarEvent:
+    """Dataclass til at sikre korrekt struktur for fødselsdagsbegivenheder."""
+    summary: str
+    start: datetime
+    end: datetime
+    description: str = field(default="")
+
+    def as_dict(self):
+        """Return event as dictionary (for Home Assistant compatibility)."""
+        return {
+            "summary": self.summary,
+            "start": self.start.isoformat(),
+            "end": self.end.isoformat(),
+            "description": self.description,
+        }
 
 
 class BirthdaysCalendar(CalendarEntity):
@@ -62,38 +74,16 @@ class BirthdaysCalendar(CalendarEntity):
         """Return the next upcoming birthday event."""
         now = dt_util.now()
         upcoming_events = [
-            event
-            for event_list in self._events.values()
-            for event in event_list
-            if isinstance(event, CalendarEvent) and event.start >= now
+            event for event_list in self._events.values() for event in event_list if event.start >= now
         ]
-
-        if not upcoming_events:
-            return None
-
-        next_event = min(upcoming_events, key=lambda x: x.start)
-
-        if not isinstance(next_event, CalendarEvent):
-            _LOGGER.error("Invalid event found in BirthdaysCalendar: %s", next_event)
-            return None
-
-        return next_event
+        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
-        try:
-            return {
-                "events": [
-                    asdict(event)
-                    for event_list in self._events.values()
-                    for event in event_list
-                    if isinstance(event, CalendarEvent)
-                ]
-            }
-        except TypeError as e:
-            _LOGGER.error("Failed to convert events to dictionary: %s", e)
-            return {"error": "Failed to retrieve events"}
+        return {
+            "events": [event.as_dict() for event_list in self._events.values() for event in event_list]
+        }
 
     async def async_get_events(self, hass, start_date, end_date):
         """Return events within a specific time range."""
@@ -103,10 +93,10 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            asdict(event)
+            event.as_dict()
             for event_list in self._events.values()
             for event in event_list
-            if isinstance(event, CalendarEvent) and start_date <= event.start <= end_date
+            if start_date <= event.start <= end_date
         ]
 
     def add_event(self, entry_id, name, year, month, day):
@@ -120,17 +110,15 @@ class BirthdaysCalendar(CalendarEntity):
         age = event_date.year - year
 
         try:
-            event = CalendarEvent(
+            event = BirthdayCalendarEvent(
                 summary=f"🎂 {name} turns {age}",
                 start=event_date,
                 end=event_date + timedelta(days=1) - timedelta(seconds=1),
+                description=f"{name} fylder {age} år!",
             )
 
-            if isinstance(event, CalendarEvent):
-                self._events[entry_id] = [event]
-                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
-            else:
-                raise ValueError("Event creation failed")
+            self._events[entry_id] = [event]
+            _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
         except Exception as e:
             _LOGGER.error("Failed to create CalendarEvent for %s: %s", name, e)
 
