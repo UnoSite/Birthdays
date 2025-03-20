@@ -6,7 +6,7 @@
                 "description": "Enter the details for the birthday you want to track.",
                 "data": {
                     "name": "Name",
-                    "year": "Year of birth",
+                    "year": "Year of birth (fx: 1999)",
                     "month": "Month of birth",
                     "day": "Day of birth"
                 }
@@ -24,7 +24,7 @@
                 "description": "Update the birthday details.",
                 "data": {
                     "name": "Name",
-                    "year": "Year of birth",
+                    "year": "Year of birth (fx: 1999)",
                     "month": "Month of birth",
                     "day": "Day of birth"
                 }
