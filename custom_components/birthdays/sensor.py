@@ -15,8 +15,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     # Tjek om nødvendige data er til stede
     required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
-    if not all(key in config for key in required_keys):
-        _LOGGER.error("Missing required data in entry: %s", config)
+    missing_keys = [key for key in required_keys if key not in config]
+
+    if missing_keys:
+        _LOGGER.error("Missing required data in entry %s: %s", entry.entry_id, ", ".join(missing_keys))
         return
 
     name_slug = config[CONF_NAME].lower().replace(" ", "_")
@@ -41,66 +43,75 @@ class BirthdaySensor(Entity):
     def __init__(self, config, entry_id, sensor_type, friendly_name, icon):
         """Initialize the sensor."""
         self._config = config
+        self._sensor_type = sensor_type
+        self._attr_native_value = None
 
         # Tjek om nødvendige data er til stede
         required_keys = [CONF_NAME, CONF_YEAR, CONF_MONTH, CONF_DAY]
-        if not all(key in config for key in required_keys):
-            _LOGGER.error("Missing required data in sensor configuration: %s", config)
+        missing_keys = [key for key in required_keys if key not in config]
+
+        if missing_keys:
+            _LOGGER.error("Missing required data in sensor configuration: %s", ", ".join(missing_keys))
             self._attr_name = "Unknown Birthday Sensor"
-            self._attr_native_value = None
+            self._attr_available = False
             return
 
         name = config[CONF_NAME]
-        name_slug = name.lower().replace(" ", "_")
 
         self._attr_name = f"Birthday: {name} - {friendly_name}"
         self._attr_unique_id = f"{entry_id}_{sensor_type}"
-        self.entity_id = f"sensor.birthdays_{name_slug}_{sensor_type}"
         self._attr_icon = icon
-        self._sensor_type = sensor_type
-        self._attr_native_value = None
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry_id)},
             name=f"Birthday: {name}",
             manufacturer=MANUFACTURER,
             model=MODEL,
         )
+        self._attr_available = True
 
-        _LOGGER.debug("Initialized BirthdaySensor: %s (entity_id: %s)", self._attr_name, self.entity_id)
+        _LOGGER.debug("Initialized BirthdaySensor: %s", self._attr_name)
 
     async def async_update(self):
         """Update sensor state."""
-        today = dt_util.now().date()
-
-        # Tjek om nødvendige datooplysninger er til stede
-        required_keys = [CONF_YEAR, CONF_MONTH, CONF_DAY]
-        if not all(key in self._config for key in required_keys):
-            _LOGGER.error("Missing date information in sensor configuration: %s", self._config)
+        if not self._attr_available:
+            _LOGGER.warning("Skipping update for %s because it's not available", self._attr_name)
             return
+
+        today = dt_util.now().date()
 
         try:
             birth_date = dt_util.parse_datetime(
                 f"{self._config[CONF_YEAR]}-{self._config[CONF_MONTH]:02d}-{self._config[CONF_DAY]:02d}T00:00:00Z"
             ).date()
         except ValueError as e:
-            _LOGGER.error("Error parsing birth date: %s", e)
+            _LOGGER.error("Error parsing birth date for %s: %s", self._attr_name, e)
             return
+
+        new_value = None
 
         if self._sensor_type == "next":
             next_birthday = birth_date.replace(year=today.year)
             if next_birthday < today:
                 next_birthday = next_birthday.replace(year=today.year + 1)
-            self._attr_native_value = (next_birthday - today).days
-            _LOGGER.debug("Next birthday for %s in %d days", self._config[CONF_NAME], self._attr_native_value)
+            new_value = (next_birthday - today).days
+            _LOGGER.debug("Next birthday for %s in %d days", self._config[CONF_NAME], new_value)
 
         elif self._sensor_type == "date":
-            self._attr_native_value = birth_date.strftime("%Y-%m-%d")
+            new_value = birth_date.strftime("%Y-%m-%d")
 
         elif self._sensor_type == "years":
             age = today.year - birth_date.year
             if (today.month, today.day) < (birth_date.month, birth_date.day):
                 age -= 1
-            self._attr_native_value = age
-            _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], self._attr_native_value)
+            new_value = age
+            _LOGGER.debug("%s is %d years old", self._config[CONF_NAME], new_value)
 
-        self.async_write_ha_state()
+        if new_value != self._attr_native_value:
+            _LOGGER.info("Updating %s: %s -> %s", self._attr_name, self._attr_native_value, new_value)
+            self._attr_native_value = new_value
+            self.async_write_ha_state()
+
+    @property
+    def available(self):
+        """Return whether the sensor is available."""
+        return self._attr_available
