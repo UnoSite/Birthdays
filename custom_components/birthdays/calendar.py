@@ -6,9 +6,17 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
+from dataclasses import asdict, dataclass
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
+
+@dataclass
+class BirthdayCalendarEvent:
+    """Dataclass to ensure correct structure for CalendarEvent."""
+    summary: str
+    start: datetime
+    end: datetime
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform."""
@@ -34,7 +42,6 @@ async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
         )
     else:
         _LOGGER.error("Skipping event addition. Entry data missing required fields: %s", entry.entry_id)
-
 
 class BirthdaysCalendar(CalendarEntity):
     """Calendar for Birthdays."""
@@ -66,11 +73,7 @@ class BirthdaysCalendar(CalendarEntity):
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
-            "events": [
-                self._convert_event_to_dict(event)
-                for event_list in self._events.values() for event in event_list
-                if isinstance(event, CalendarEvent)
-            ]
+            "events": [asdict(event) for event_list in self._events.values() for event in event_list]
         }
 
     async def async_get_events(self, hass, start_date, end_date):
@@ -81,7 +84,7 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            self._convert_event_to_dict(event)
+            asdict(event)
             for event_list in self._events.values() for event in event_list
             if start_date <= event.start <= end_date
         ]
@@ -98,7 +101,7 @@ class BirthdaysCalendar(CalendarEntity):
         # Beregn alderen, som personen fylder på deres næste fødselsdag
         age = event_date.year - year
 
-        event = CalendarEvent(
+        event = BirthdayCalendarEvent(
             summary=f"🎂 {name} turns {age}",
             start=event_date,
             end=event_date + timedelta(days=1) - timedelta(seconds=1),
@@ -131,15 +134,3 @@ class BirthdaysCalendar(CalendarEntity):
         if calendar_entity:
             entity_registry.async_remove(calendar_entity.entity_id)
             _LOGGER.info("Birthdays calendar entity removed.")
-
-    def _convert_event_to_dict(self, event):
-        """Convert CalendarEvent to a dictionary format expected by Home Assistant."""
-        if not isinstance(event, CalendarEvent):
-            _LOGGER.error("Invalid event type: %s", type(event))
-            return {}
-
-        return {
-            "summary": event.summary,
-            "start": event.start.isoformat(),
-            "end": event.end.isoformat(),
-                  }
