@@ -6,17 +6,25 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass, asdict
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
 
 @dataclass
 class BirthdayCalendarEvent:
-    """Dataclass to ensure correct structure for CalendarEvent."""
+    """Dataclass to structure the calendar events."""
     summary: str
     start: datetime
     end: datetime
+
+    def to_calendar_event(self):
+        """Convert to Home Assistant's CalendarEvent format."""
+        return CalendarEvent(
+            summary=self.summary,
+            start=self.start,
+            end=self.end
+        )
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform."""
@@ -65,7 +73,7 @@ class BirthdaysCalendar(CalendarEntity):
         """Return the next upcoming birthday event."""
         now = dt_util.now()
         upcoming_events = [
-            event for event_list in self._events.values() for event in event_list if event.start >= now
+            event.to_calendar_event() for event_list in self._events.values() for event in event_list if event.start >= now
         ]
         return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
