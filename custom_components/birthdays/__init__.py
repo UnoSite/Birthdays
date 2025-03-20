@@ -15,7 +15,6 @@ Configuration is handled via the UI (Config Flow).
 import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from .const import *
 
@@ -39,10 +38,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
     # Forward setup to all necessary platforms
-    await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
+    try:
+        await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
+        _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
+    except Exception as e:
+        _LOGGER.error("Failed to set up Birthdays entry %s: %s", entry.entry_id, str(e))
+        return False
 
-    _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Handle removal of a config entry.
@@ -75,9 +79,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not remaining_entries:
         _LOGGER.info("Last birthday instance removed. Removing calendar...")
         await hass.config_entries.async_unload_platforms(entry, ["calendar"])
+        await _remove_calendar_entity(hass)
 
     _LOGGER.info("Successfully unloaded Birthdays integration for entry: %s", entry.entry_id)
     return success
+
 
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Handle cleanup when an entry is removed.
@@ -91,8 +97,6 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
     """
     _LOGGER.debug("Removing Birthdays integration entry: %s", entry.entry_id)
 
-    entity_registry = async_get_entity_registry(hass)
-
     # Check if there are remaining birthdays
     remaining_entries = [
         ent for ent in hass.config_entries.async_entries(DOMAIN) if ent.entry_id != entry.entry_id
@@ -100,12 +104,7 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
 
     if not remaining_entries:
         _LOGGER.info("Last birthday removed. Removing Birthdays calendar entity.")
-
-        # Find and remove the calendar entity
-        calendar_entity = entity_registry.async_get(CALENDAR_ENTITY_ID)
-        if calendar_entity:
-            entity_registry.async_remove(calendar_entity.entity_id)
-            _LOGGER.info("Birthdays calendar entity removed.")
+        await _remove_calendar_entity(hass)
 
     # Remove domain data completely if no birthdays remain
     if DOMAIN in hass.data and not hass.data[DOMAIN]:
@@ -113,3 +112,13 @@ async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry):
         _LOGGER.info("All Birthdays data removed from Home Assistant.")
 
     _LOGGER.info("Cleanup complete for Birthdays integration entry: %s", entry.entry_id)
+
+
+async def _remove_calendar_entity(hass: HomeAssistant):
+    """Remove the Birthdays calendar entity when the last birthday is deleted."""
+    entity_registry = async_get_entity_registry(hass)
+    calendar_entity = entity_registry.async_get(CALENDAR_ENTITY_ID)
+
+    if calendar_entity:
+        entity_registry.async_remove(calendar_entity.entity_id)
+        _LOGGER.info("Birthdays calendar entity removed.")
