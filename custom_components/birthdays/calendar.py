@@ -6,18 +6,9 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
-from dataclasses import dataclass, asdict
 from .const import *
 
 _LOGGER = logging.getLogger(__name__)
-
-@dataclass
-class BirthdayCalendarEvent:
-    """Dataclass til at repræsentere en fødselsdag i kalenderen."""
-    summary: str
-    start: datetime
-    end: datetime
-    all_day: bool = True  # Home Assistant kræver en 'all_day' attribut
 
 async def async_setup_entry(hass: HomeAssistant, entry, async_add_entities):
     """Set up the calendar platform."""
@@ -73,19 +64,24 @@ class BirthdaysCalendar(CalendarEntity):
             event
             for event_list in self._events.values()
             for event in event_list
-            if isinstance(event, BirthdayCalendarEvent) and event.start >= now
+            if isinstance(event, CalendarEvent) and event.start_datetime_local >= now
         ]
-        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
+        return min(upcoming_events, key=lambda x: x.start_datetime_local) if upcoming_events else None
 
     @property
     def extra_state_attributes(self):
         """Return state attributes for the calendar entity."""
         return {
             "events": [
-                asdict(event)  # Brug Home Assistant's forventede format
+                {
+                    "summary": event.summary,
+                    "start_time": event.start_datetime_local.isoformat(),
+                    "end_time": event.end_datetime_local.isoformat(),
+                    "all_day": event.all_day,
+                }
                 for event_list in self._events.values()
                 for event in event_list
-                if isinstance(event, BirthdayCalendarEvent)
+                if isinstance(event, CalendarEvent)
             ]
         }
 
@@ -97,10 +93,15 @@ class BirthdaysCalendar(CalendarEntity):
         end_date = dt_util.as_utc(end_date)
 
         return [
-            asdict(event)  # Brug dataclass conversion
+            {
+                "summary": event.summary,
+                "start_time": event.start_datetime_local.isoformat(),
+                "end_time": event.end_datetime_local.isoformat(),
+                "all_day": event.all_day,
+            }
             for event_list in self._events.values()
             for event in event_list
-            if isinstance(event, BirthdayCalendarEvent) and start_date <= event.start <= end_date
+            if isinstance(event, CalendarEvent) and start_date <= event.start_datetime_local <= end_date
         ]
 
     def add_event(self, entry_id, name, year, month, day):
@@ -114,15 +115,16 @@ class BirthdaysCalendar(CalendarEntity):
         age = event_date.year - year
 
         try:
-            event = BirthdayCalendarEvent(
+            event = CalendarEvent(
                 summary=f"🎂 {name} turns {age}",
-                start=event_date,
-                end=event_date + timedelta(days=1) - timedelta(seconds=1),
+                start_datetime_local=event_date,
+                end_datetime_local=event_date + timedelta(days=1) - timedelta(seconds=1),
+                all_day=True
             )
 
-            if isinstance(event, BirthdayCalendarEvent):
+            if isinstance(event, CalendarEvent):
                 self._events[entry_id] = [event]
-                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
+                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start_datetime_local.strftime("%Y-%m-%d"))
             else:
                 raise ValueError("Event creation failed")
         except Exception as e:
