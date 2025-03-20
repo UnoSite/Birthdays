@@ -109,7 +109,6 @@ class BirthdaysCalendar(CalendarEntity):
                 summary=f"🎂 {name} turns {age}",
                 start=event_date,
                 end=event_date + timedelta(days=1) - timedelta(seconds=1),
-                all_day=True,  # Tilføj 'all_day' for at matche Home Assistant
             )
 
             if isinstance(event, CalendarEvent):
@@ -153,5 +152,5 @@ class BirthdaysCalendar(CalendarEntity):
             "summary": event.summary,
             "start": event.start.isoformat(),
             "end": event.end.isoformat(),
-            "all_day": event.all_day,  # Tilføj denne linje for at sikre korrekt format
-        }
+            "all_day": True,  # Tilføj all_day i dictionary, men ikke i CalendarEvent
+                }
