@@ -64,9 +64,9 @@ class BirthdaysCalendar(CalendarEntity):
             event
             for event_list in self._events.values()
             for event in event_list
-            if isinstance(event, CalendarEvent) and event.start_datetime_local >= now
+            if isinstance(event, CalendarEvent) and event.start >= now
         ]
-        return min(upcoming_events, key=lambda x: x.start_datetime_local) if upcoming_events else None
+        return min(upcoming_events, key=lambda x: x.start) if upcoming_events else None
 
     @property
     def extra_state_attributes(self):
@@ -75,9 +75,8 @@ class BirthdaysCalendar(CalendarEntity):
             "events": [
                 {
                     "summary": event.summary,
-                    "start_time": event.start_datetime_local.isoformat(),
-                    "end_time": event.end_datetime_local.isoformat(),
-                    "all_day": event.all_day,
+                    "start_time": event.start.isoformat(),
+                    "end_time": event.end.isoformat(),
                 }
                 for event_list in self._events.values()
                 for event in event_list
@@ -95,13 +94,12 @@ class BirthdaysCalendar(CalendarEntity):
         return [
             {
                 "summary": event.summary,
-                "start_time": event.start_datetime_local.isoformat(),
-                "end_time": event.end_datetime_local.isoformat(),
-                "all_day": event.all_day,
+                "start_time": event.start.isoformat(),
+                "end_time": event.end.isoformat(),
             }
             for event_list in self._events.values()
             for event in event_list
-            if isinstance(event, CalendarEvent) and start_date <= event.start_datetime_local <= end_date
+            if isinstance(event, CalendarEvent) and start_date <= event.start <= end_date
         ]
 
     def add_event(self, entry_id, name, year, month, day):
@@ -117,14 +115,13 @@ class BirthdaysCalendar(CalendarEntity):
         try:
             event = CalendarEvent(
                 summary=f"🎂 {name} turns {age}",
-                start_datetime_local=event_date,
-                end_datetime_local=event_date + timedelta(days=1) - timedelta(seconds=1),
-                all_day=True
+                start=event_date,
+                end=event_date + timedelta(days=1) - timedelta(seconds=1),
             )
 
             if isinstance(event, CalendarEvent):
                 self._events[entry_id] = [event]
-                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start_datetime_local.strftime("%Y-%m-%d"))
+                _LOGGER.info("Added/updated birthday event: %s (turning %d) on %s", name, age, event.start.strftime("%Y-%m-%d"))
             else:
                 raise ValueError("Event creation failed")
         except Exception as e:
