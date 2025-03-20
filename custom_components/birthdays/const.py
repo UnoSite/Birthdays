@@ -18,7 +18,6 @@ CALENDAR_ENTITY_ID = "calendar.birthdays"   # Fixed Entity ID for the calendar
 
 # Sensor entity name templates
 SENSOR_NAME_TEMPLATE = "sensor.birthdays_{name}_{sensor_type}"
-BINARY_SENSOR_NAME_TEMPLATE = "binary_sensor.birthdays_{name}_today"
 
 # Device identifiers
 DEVICE_ID_TEMPLATE = "birthdays_{name}"
@@ -32,10 +31,16 @@ ICON_BIRTHDAY = "mdi:cake-variant"
 ICON_NEXT_BIRTHDAY = "mdi:calendar-clock"
 ICON_DATE_OF_BIRTH = "mdi:calendar"
 ICON_YEARS_OLD = "mdi:numeric"
-ICON_BINARY_SENSOR = "mdi:cake"
+
+# Default sensor scan interval (optional)
+DEFAULT_SCAN_INTERVAL = 3600  # 1 time (i sekunder)
 
 # Logging messages
 LOG_BIRTHDAY_ADDED = "Added birthday event: %s on %s"
 LOG_BIRTHDAY_REMOVED = "Removed birthday events for entry: %s"
 LOG_CALENDAR_CREATED = "Birthdays calendar entity added: %s"
 LOG_CALENDAR_REMOVED = "Removed Birthdays calendar entity as no birthdays remain."
+LOG_ENTRY_MISSING_DATA = "Entry is missing required data fields: %s"
+LOG_SENSOR_UPDATE = "Updating sensor for %s"
+LOG_INVALID_DATE = "Invalid date provided: %s-%s-%s"
+LOG_DUPLICATE_ENTRY = "Duplicate entry detected: %s"
