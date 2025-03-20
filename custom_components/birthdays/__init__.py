@@ -37,7 +37,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = entry.data
 
-    # Forward setup to all necessary platforms
     try:
         await hass.config_entries.async_forward_entry_setups(entry, ["sensor", "binary_sensor", "calendar"])
         _LOGGER.info("Birthdays integration setup complete for entry: %s", entry.entry_id)
@@ -120,5 +119,10 @@ async def _remove_calendar_entity(hass: HomeAssistant):
     calendar_entity = entity_registry.async_get(CALENDAR_ENTITY_ID)
 
     if calendar_entity:
-        entity_registry.async_remove(calendar_entity.entity_id)
-        _LOGGER.info("Birthdays calendar entity removed.")
+        try:
+            entity_registry.async_remove(calendar_entity.entity_id)
+            _LOGGER.info("Birthdays calendar entity removed.")
+        except Exception as e:
+            _LOGGER.error("Failed to remove Birthdays calendar entity: %s", str(e))
+    else:
+        _LOGGER.info("No Birthdays calendar entity found to remove.")
