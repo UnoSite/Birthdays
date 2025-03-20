@@ -44,7 +44,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Check for duplicate entries
             existing_entries = {
-                entry.data.get(CONF_NAME, "").strip().lower() 
+                entry.data.get(CONF_NAME, "").strip().lower()
                 for entry in self._async_current_entries()
                 if CONF_NAME in entry.data
             }
@@ -69,7 +69,7 @@ class BirthdaysConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME): str,
-                vol.Required(CONF_YEAR, default=CURRENT_YEAR): vol.Coerce(int),
+                vol.Required(CONF_YEAR, default=CURRENT_YEAR): vol.All(vol.Coerce(int), vol.Range(min=YEARS_RANGE[0], max=YEARS_RANGE[1])),
                 vol.Required(CONF_MONTH, default=1): vol.In(range(1, 13)),  # Month selection remains a dropdown
                 vol.Required(CONF_DAY, default=1): vol.In(range(1, 32)),  # Day selection remains a dropdown
             }),
@@ -129,9 +129,9 @@ class BirthdaysOptionsFlowHandler(config_entries.OptionsFlow):
             step_id="init",
             data_schema=vol.Schema({
                 vol.Required(CONF_NAME, default=current_config.get(CONF_NAME, "")): str,
-                vol.Required(CONF_YEAR, default=current_config.get(CONF_YEAR, CURRENT_YEAR)): vol.Coerce(int),
+                vol.Required(CONF_YEAR, default=current_config.get(CONF_YEAR, CURRENT_YEAR)): vol.All(vol.Coerce(int), vol.Range(min=YEARS_RANGE[0], max=YEARS_RANGE[1])),
                 vol.Required(CONF_MONTH, default=current_config.get(CONF_MONTH, 1)): vol.In(range(1, 13)),
                 vol.Required(CONF_DAY, default=current_config.get(CONF_DAY, 1)): vol.In(range(1, 32)),
             }),
             errors=errors
-    )
+                )
